@@ -1,0 +1,46 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Playfair+Display:ital,wght@0,400;0,500;1,400;1,500&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; background: #fbfaf6; color: #173d35; font-family: 'DM Sans', sans-serif; }
+  input, select { width: 100%; margin-top: 7px; border: 1px solid #d9e0d5; border-radius: 10px; background: white; padding: 12px 13px; color: #173d35; outline: none; }
+  input:focus, select:focus { border-color: #315d4c; box-shadow: 0 0 0 3px rgba(49,93,76,.12); }
+  label { color: #65736b; font-size: 12px; letter-spacing: .04em; text-transform: uppercase; }
+}
+
+@layer components {
+  .container { width: 100%; max-width: 1280px; margin-inline: auto; padding-inline: 1.5rem; }
+  .eyebrow { font-size: 10px; font-weight: 600; letter-spacing: .2em; text-transform: uppercase; color: #738079; }
+  .section-title { margin-top: 1rem; font-family: 'Playfair Display', serif; font-size: clamp(2.8rem, 5vw, 4.5rem); line-height: .98; letter-spacing: -.04em; color: #173d35; }
+  .section-title em { font-weight: 400; color: #709079; }
+  .button-primary, .button-gold, .button-light, .button-outline, .button-ghost { display: inline-flex; align-items: center; justify-content: center; gap: .6rem; border-radius: 999px; padding: .85rem 1.25rem; font-size: .82rem; font-weight: 600; transition: transform .2s ease, background .2s ease; }
+  .button-primary:hover, .button-gold:hover, .button-light:hover, .button-outline:hover, .button-ghost:hover { transform: translateY(-2px); }
+  .button-primary { background: #315d4c; color: white; }
+  .button-gold { background: #d5b36a; color: #173d35; }
+  .button-light { background: white; color: #173d35; }
+  .button-outline { border: 1px solid #b7c7b8; color: #315d4c; }
+  .button-ghost { border: 1px solid rgba(255,255,255,.35); color: white; }
+  .stay-card { overflow: hidden; border: 1px solid #e1e7dd; border-radius: 1rem; background: white; }
+}
+
+.hero { position: relative; overflow: hidden; background: linear-gradient(90deg, rgba(12,42,34,.92) 0%, rgba(18,57,46,.62) 48%, rgba(16,47,39,.2) 100%), url('/siddhi/page-02.jpg') center/cover; }
+.hero::after { position: absolute; inset: 0; background: linear-gradient(0deg, rgba(12,42,34,.45), transparent 42%); content: ''; }
+.stay-image { position: relative; height: 250px; background-position: center; background-size: cover; }
+.stay-image span { position: absolute; right: 1rem; top: 1rem; display: grid; height: 2.2rem; width: 2.2rem; place-items: center; border-radius: 999px; background: rgba(255,255,255,.85); font-size: 11px; color: #315d4c; }
+.adventure-shape { position: absolute; right: -10%; top: -30%; height: 150%; width: 58%; border-radius: 50%; background: linear-gradient(135deg, rgba(255,255,255,.35), rgba(112,144,121,.35)), url('/siddhi/page-13.jpg') center/cover; transform: rotate(12deg); }
+.gallery-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .8rem; }
+.gallery-tile { position: relative; overflow: hidden; min-height: 210px; border-radius: 1rem; background: #d9e3d6; }
+.gallery-tile:first-child { grid-row: span 2; min-height: 430px; }
+.gallery-tile img { height: 100%; width: 100%; object-fit: cover; transition: transform .5s ease; }
+.gallery-tile:hover img { transform: scale(1.04); }
+.gallery-tile figcaption { position: absolute; bottom: 0; left: 0; right: 0; padding: 2rem 1rem 1rem; background: linear-gradient(transparent, rgba(12,42,34,.75)); color: white; font-size: .78rem; }
+.booking-terms-scrollbar { scrollbar-gutter: stable; padding-right: .45rem; scrollbar-width: thin; scrollbar-color: #709079 transparent; }
+.booking-terms-scrollbar::-webkit-scrollbar { width: 8px; }
+.booking-terms-scrollbar::-webkit-scrollbar-track { margin-block: .2rem; border-radius: 999px; background: transparent; }
+.booking-terms-scrollbar::-webkit-scrollbar-thumb { border: 2px solid #f7f9f4; border-radius: 999px; background: #709079; }
+.booking-terms-scrollbar::-webkit-scrollbar-thumb:hover { background: #315d4c; }
+@media (max-width: 640px) { .adventure-shape { right: -45%; width: 85%; opacity: .55; } }
