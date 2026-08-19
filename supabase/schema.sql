@@ -58,6 +58,12 @@ create table if not exists public.bookings (
   terms_accepted_at timestamptz,
   terms_version text,
   terms_content jsonb,
+  aadhaar_number text,
+  total_amount int,
+  paid_amount int not null default 0,
+  pending_amount int not null default 0,
+  payment_status text not null default 'unpaid',
+  advance_code text,
   notes text,
   created_at timestamptz not null default now()
 );
@@ -67,6 +73,12 @@ alter table public.bookings add column if not exists check_out_time time;
 alter table public.bookings add column if not exists terms_accepted_at timestamptz;
 alter table public.bookings add column if not exists terms_version text;
 alter table public.bookings add column if not exists terms_content jsonb;
+alter table public.bookings add column if not exists aadhaar_number text;
+alter table public.bookings add column if not exists total_amount int;
+alter table public.bookings add column if not exists paid_amount int not null default 0;
+alter table public.bookings add column if not exists pending_amount int not null default 0;
+alter table public.bookings add column if not exists payment_status text not null default 'unpaid';
+alter table public.bookings add column if not exists advance_code text;
 create index if not exists idx_bookings_service_dates on public.bookings(service, check_in, check_out);
 create index if not exists idx_bookings_status on public.bookings(status);
 create index if not exists idx_bookings_user on public.bookings(user_id);

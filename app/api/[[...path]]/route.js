@@ -4,8 +4,10 @@ import Razorpay from 'razorpay'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { IMAGE_DEFAULTS } from '@/lib/siteImages'
-import { sendBookingTermsEmail, sendPaidBookingEmails } from '@/lib/booking-email'
+import { sendPaidBookingEmails } from '@/lib/booking-email'
 import { normaliseBookingTerms } from '@/lib/booking-terms'
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
+import { sendAutomatedWhatsAppMessage } from '@/lib/whatsapp'
 
 const defaultPricing = { masterBedroom: 4500, villa2BHK: 9000, villa4BHK: 15000, oneDayTour: 700, miniWaterPark: 950, weddingEvent: 35000, engagementEvent: 18000, birthdayEvent: 12000, getTogetherEvent: 10000 }
 const pricingKeys = Object.keys(defaultPricing)
@@ -78,8 +80,18 @@ async function saveBookingTerms(admin, value) {
   return admin.from('settings').upsert({ key: 'booking_terms', value, updated_at: new Date().toISOString() })
 }
 
+async function getAdvanceCodes(admin) {
+  const { data } = await admin.from('settings').select('value').eq('key', 'advance_codes').single()
+  return Array.isArray(data?.value) ? data.value : []
+}
+
+async function saveAdvanceCodes(admin, value) {
+  return admin.from('settings').upsert({ key: 'advance_codes', value, updated_at: new Date().toISOString() })
+}
+
 async function sendPaymentConfirmation(admin, booking, paymentSource, recipients = {}) {
   try {
+    const enrichedBooking = enrichBookingWithAdvanceNotes(booking)
     const reportStart = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
     const { data: last30DaysBookings, error } = await admin
       .from('bookings')
@@ -87,11 +99,65 @@ async function sendPaymentConfirmation(admin, booking, paymentSource, recipients
       .gte('created_at', reportStart)
       .order('created_at', { ascending: false })
     if (error) throw error
-    return await sendPaidBookingEmails({ booking, last30DaysBookings: last30DaysBookings || [booking], paymentSource, ...recipients })
+    const enrichedBookings = (last30DaysBookings || [enrichedBooking]).map(enrichBookingWithAdvanceNotes)
+
+    // Trigger automated background WhatsApp message delivery alongside email
+    sendAutomatedWhatsAppMessage(enrichedBooking).catch(err => {
+      console.error(`WhatsApp auto-dispatch error for ${booking.id}:`, err?.message || err)
+    })
+
+    return await sendPaidBookingEmails({ booking: enrichedBooking, last30DaysBookings: enrichedBookings, paymentSource, ...recipients })
   } catch (error) {
     // Payment is already recorded; never undo a valid payment if email delivery fails.
-    console.error(`Payment email failed for ${booking.id}:`, error)
+    console.error(`Payment confirmation delivery failed for ${booking.id}:`, error)
     return { sent: false, reason: 'delivery-failed' }
+  }
+}
+
+function enrichBookingWithAdvanceNotes(booking) {
+  if (!booking) return booking
+  let pendingAmount = Number(booking.pending_amount || 0)
+  let totalAmount = Number(booking.total_amount || 0)
+  let paidAmount = Number(booking.paid_amount || 0)
+  let paymentStatus = booking.payment_status || (booking.paid ? (pendingAmount > 0 ? 'advance' : 'full') : 'unpaid')
+  let advanceCode = booking.advance_code || null
+
+  // If custom columns were fallback-saved into notes
+  if (!pendingAmount && booking.notes && booking.notes.includes('Pending Balance: ₹')) {
+    const matchPending = booking.notes.match(/Pending Balance:\s*₹(\d+)/i)
+    const matchDeposit = booking.notes.match(/Advance Deposit:\s*₹(\d+)/i)
+    const matchCode = booking.notes.match(/Code:\s*([A-Z0-9_-]+)/i)
+    if (matchPending) pendingAmount = Number(matchPending[1])
+    if (matchDeposit) {
+      const deposit = Number(matchDeposit[1])
+      if (!totalAmount) totalAmount = deposit + pendingAmount
+      if (booking.paid && !paidAmount) paidAmount = deposit
+    }
+    if (matchCode && !advanceCode) advanceCode = matchCode[1]
+  }
+
+  // If booking is paid and paid_amount is 0 or missing, set paidAmount to amount (deposit or full)
+  if (booking.paid && !paidAmount) {
+    paidAmount = Number(booking.amount || 0)
+  }
+
+  if (!totalAmount) {
+    totalAmount = Number(booking.amount || 0) + pendingAmount
+  }
+
+  if (booking.paid) {
+    paymentStatus = pendingAmount > 0 ? 'advance' : 'full'
+  } else if (!paymentStatus || paymentStatus === 'unpaid') {
+    paymentStatus = pendingAmount > 0 ? 'advance' : 'unpaid'
+  }
+
+  return {
+    ...booking,
+    pending_amount: pendingAmount,
+    total_amount: totalAmount,
+    paid_amount: paidAmount,
+    payment_status: paymentStatus,
+    advance_code: advanceCode,
   }
 }
 
@@ -112,12 +178,58 @@ export async function GET(request, { params }) {
       const guard = await requireRole(['staff', 'manager', 'super_admin'])
       if (guard.error) return NextResponse.json({ error: guard.error }, { status: guard.status })
       const { data } = await admin.from('bookings').select('*').order('created_at', { ascending: false }).limit(200)
-      return NextResponse.json(data || [])
+      return NextResponse.json((data || []).map(enrichBookingWithAdvanceNotes))
     }
 
     if (path[0] === 'coupons') {
       const { data } = await admin.from('coupons').select('*').order('created_at', { ascending: false })
       return NextResponse.json(data || [])
+    }
+
+    if (path[0] === 'advance-codes') {
+      if (path[1] === 'validate') {
+        const clientIp = getClientIp(request)
+        const limit = checkRateLimit(clientIp, 'advance_validate', 30, 60 * 1000)
+        if (!limit.allowed) {
+          return NextResponse.json({ error: `Too many validation attempts. Please try again in ${limit.resetInSeconds}s.` }, { status: 429 })
+        }
+        const url = new URL(request.url)
+        const code = (url.searchParams.get('code') || '').trim().toUpperCase()
+        if (!code) return NextResponse.json({ valid: false })
+        const codes = await getAdvanceCodes(admin)
+        const found = codes.find(c => c.code.toUpperCase() === code && c.active)
+        if (!found) return NextResponse.json({ valid: false })
+        return NextResponse.json({ valid: true, code: found.code, percentage: found.percentage, fixedAmount: found.fixedAmount })
+      }
+      const guard = await requireRole(['manager', 'super_admin'])
+      if (guard.error) return NextResponse.json({ error: guard.error }, { status: guard.status })
+      return NextResponse.json(await getAdvanceCodes(admin))
+    }
+
+    if (path[0] === 'bookings' && path[1] === 'public' && path[2]) {
+      const { data: rawBooking, error } = await admin.from('bookings').select('*').eq('id', path[2]).single()
+      if (error || !rawBooking) return NextResponse.json({ error: 'Booking not found' }, { status: 404 })
+      const booking = enrichBookingWithAdvanceNotes(rawBooking)
+      return NextResponse.json({
+        id: booking.id,
+        name: booking.name,
+        email: booking.email,
+        phone: booking.phone,
+        service: booking.service,
+        check_in: booking.check_in,
+        check_out: booking.check_out,
+        check_in_time: booking.check_in_time,
+        check_out_time: booking.check_out_time,
+        guests: booking.guests,
+        nights: booking.nights,
+        amount: booking.amount,
+        total_amount: booking.total_amount,
+        paid_amount: booking.paid_amount,
+        pending_amount: booking.pending_amount,
+        paid: booking.paid,
+        payment_status: booking.payment_status,
+        status: booking.status,
+      })
     }
 
     if (path[0] === 'images') {
@@ -229,19 +341,75 @@ export async function POST(request, { params }) {
 
     const body = await request.json().catch(() => ({}))
 
-    // ---- Bookings: create (with real-time availability + coupon) ----
+    // ---- Advance Codes: create single-use advance code ----
+    if (path[0] === 'advance-codes') {
+      const guard = await requireRole(['manager', 'super_admin'])
+      if (guard.error) return NextResponse.json({ error: guard.error }, { status: guard.status })
+      const code = String(body.code || '').trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '')
+      if (!code || code.length < 3) return NextResponse.json({ error: 'Code must be at least 3 characters' }, { status: 400 })
+      const percentage = body.percentage !== undefined && body.percentage !== null && body.percentage !== '' ? Number(body.percentage) : (body.fixedAmount ? null : 50)
+      const fixedAmount = body.fixedAmount ? Number(body.fixedAmount) : null
+      const codes = await getAdvanceCodes(admin)
+      if (codes.some(c => c.code === code)) return NextResponse.json({ error: 'Code already exists' }, { status: 400 })
+      const newEntry = {
+        id: crypto.randomUUID(),
+        code,
+        percentage: percentage !== null ? Math.min(100, Math.max(1, percentage)) : null,
+        fixedAmount: fixedAmount ? Math.max(1, fixedAmount) : null,
+        active: true,
+        usageLimit: 1,
+        used: 0,
+        createdAt: new Date().toISOString(),
+      }
+      codes.unshift(newEntry)
+      await saveAdvanceCodes(admin, codes)
+      return NextResponse.json(newEntry, { status: 201 })
+    }
+
+    // ---- Bookings: create (with real-time availability + coupon + advance code) ----
     if (path[0] === 'bookings') {
+      const clientIp = getClientIp(request)
+      const limit = checkRateLimit(clientIp, 'create_booking', 10, 5 * 60 * 1000)
+      if (!limit.allowed) {
+        return NextResponse.json({ error: `Too many booking requests. Please try again in ${limit.resetInSeconds}s.` }, { status: 429 })
+      }
+
       if (!body.name || !body.email || !body.phone || !body.checkIn || !body.checkOut || !body.service)
         return NextResponse.json({ error: 'Please complete all required booking details' }, { status: 400 })
       if (body.termsAccepted !== true)
         return NextResponse.json({ error: 'You must accept the booking terms and conditions before continuing' }, { status: 400 })
 
+      const rawAadhaar = String(body.aadhaarNumber || body.aadhaar_number || body.aadhaar || '').replace(/\D/g, '')
+      if (rawAadhaar && rawAadhaar.length !== 12)
+        return NextResponse.json({ error: 'Aadhaar number must be 12 digits' }, { status: 400 })
+      const formattedAadhaar = rawAadhaar ? rawAadhaar.replace(/(\d{4})(?=\d)/g, '$1 ') : null
+
       const checkIn = new Date(body.checkIn)
       const checkOut = new Date(body.checkOut)
+      const today = new Date(); today.setHours(0, 0, 0, 0)
+
       if (Number.isNaN(checkIn.getTime()) || Number.isNaN(checkOut.getTime()))
         return NextResponse.json({ error: 'Please provide valid check-in and check-out dates' }, { status: 400 })
-      if (checkOut <= checkIn)
-        return NextResponse.json({ error: 'Check out must be after check in' }, { status: 400 })
+      if (checkIn < today || checkOut < today)
+        return NextResponse.json({ error: 'Past dates are not allowed. Please select today or a future date.' }, { status: 400 })
+      
+      // Determine booking classification
+      const eventServices = ['Engagement Ceremony', 'Birthday Party', 'Get Together', 'Wedding Ceremony']
+      const dayTourServices = ['One Day Tour', 'Mini Water Park', 'One Day Tour + Mini Water Park', 'One Day Tour + Mini Adventure Park']
+      const isEventService = eventServices.includes(body.service)
+      const isDayTourService = dayTourServices.includes(body.service)
+      const isShortStay = Boolean(body.isShortStay || body.stayType === 'short_stay')
+      const isSingleDayBooking = isEventService || isDayTourService || isShortStay
+
+      if (isSingleDayBooking) {
+        // For events, day tours, and 4-5 hour short stays, check-out can be on the same date
+        if (checkOut < checkIn)
+          return NextResponse.json({ error: 'Check-out date must be on or after check-in date' }, { status: 400 })
+      } else {
+        // For multi-day stays, check-out must be after check-in
+        if (checkOut <= checkIn)
+          return NextResponse.json({ error: 'Check-out must be after check-in date' }, { status: 400 })
+      }
 
       // Overlap check
       const { data: existing } = await admin
@@ -251,14 +419,50 @@ export async function POST(request, { params }) {
         .in('status', ['pending', 'confirmed'])
 
       if ((existing || []).some(row => overlaps(body.checkIn, body.checkOut, row.check_in, row.check_out)))
-        return NextResponse.json({ error: 'Those dates are no longer available for this accommodation' }, { status: 409 })
+        return NextResponse.json({ error: 'Those dates are no longer available for this accommodation/event' }, { status: 409 })
 
-      // Pricing
+      // Pricing - Strict server-side calculation
       const { data: pricingRow } = await admin.from('pricing').select('values').eq('id', 'current').single()
       const rates = cleanPricing(pricingRow?.values)
       const rateKey = serviceRateKey[body.service]
-      const nights = Math.max(1, Math.ceil((checkOut - checkIn) / 86400000))
-      const subtotal = (rates[rateKey] || 0) * nights
+      const guests = Math.max(1, Math.min(200, Number(body.guests) || 1))
+      const rawNights = Math.ceil((checkOut - checkIn) / 86400000)
+      const nights = isSingleDayBooking ? 1 : Math.max(1, rawNights)
+
+      let subtotal = 0
+      if (isShortStay) {
+        // 4-5 hours Day-Use short stay is priced at 50% of the standard overnight rate
+        subtotal = Math.round((rates[rateKey] || 0) * 0.5)
+      } else if (isEventService) {
+        // Flat 1-day event ceremony package
+        subtotal = (rates[rateKey] || 0)
+      } else if (isDayTourService) {
+        // Per-person day tour/water park
+        subtotal = (rates[rateKey] || 0) * guests
+      } else {
+        // Overnight stay
+        subtotal = (rates[rateKey] || 0) * nights
+      }
+
+      // Default slot timings
+      let checkInTime = body.checkInTime || null
+      let checkOutTime = body.checkOutTime || null
+
+      if (!checkInTime || !checkOutTime) {
+        if (isShortStay) {
+          checkInTime = checkInTime || '10:00'
+          checkOutTime = checkOutTime || '15:00'
+        } else if (isEventService) {
+          checkInTime = checkInTime || (body.service === 'Birthday Party' ? '16:00' : '09:00')
+          checkOutTime = checkOutTime || (body.service === 'Birthday Party' ? '22:00' : '21:00')
+        } else if (isDayTourService) {
+          checkInTime = checkInTime || '09:30'
+          checkOutTime = checkOutTime || '18:00'
+        } else {
+          checkInTime = checkInTime || '11:00'
+          checkOutTime = checkOutTime || '10:00'
+        }
+      }
 
       // Coupon
       let discount = 0
@@ -272,7 +476,33 @@ export async function POST(request, { params }) {
             : Math.round(subtotal * Math.min(100, Number(coupon.value)) / 100)
           if (coupon.max_discount) discount = Math.min(discount, coupon.max_discount)
           appliedCoupon = coupon.code
-          await admin.from('coupons').update({ used: (coupon.used || 0) + 1 }).eq('id', coupon.id)
+          // Note: coupon.used is committed upon successful payment verification, so failed checkouts do not burn customer coupons!
+        }
+      }
+
+      // Check for Advance Code (single-use auto-delete)
+      let isAdvanceBooking = false
+      let appliedAdvanceCode = null
+      let depositAmount = 0
+      let pendingBalance = 0
+      const passedAdvCode = String(body.advanceCode || body.couponCode || '').trim().toUpperCase()
+      if (passedAdvCode) {
+        const allAdvCodes = await getAdvanceCodes(admin)
+        const advIdx = allAdvCodes.findIndex(c => c.code.toUpperCase() === passedAdvCode && c.active)
+        if (advIdx !== -1) {
+          const adv = allAdvCodes[advIdx]
+          const netTotal = Math.max(0, subtotal - discount)
+          depositAmount = adv.percentage !== null && adv.percentage !== undefined
+            ? Math.round(netTotal * Math.min(100, Number(adv.percentage)) / 100)
+            : Math.min(netTotal, Number(adv.fixedAmount || 0))
+          depositAmount = Math.max(1, depositAmount)
+          pendingBalance = Math.max(0, netTotal - depositAmount)
+          isAdvanceBooking = true
+          appliedAdvanceCode = adv.code
+
+          // Strict Single-Use Auto-Delete: purge immediately so it can never be used again!
+          allAdvCodes.splice(advIdx, 1)
+          await saveAdvanceCodes(admin, allAdvCodes)
         }
       }
 
@@ -285,7 +515,8 @@ export async function POST(request, { params }) {
       } catch {}
 
       const bookingId = `SFR-${crypto.randomUUID().slice(0, 8).toUpperCase()}`
-      const amount = Math.max(0, subtotal - discount)
+      const totalBill = Math.max(0, subtotal - discount)
+      const chargeAmount = isAdvanceBooking ? depositAmount : totalBill
       const bookingTerms = await getBookingTerms(admin)
       const record = {
         id: bookingId,
@@ -296,22 +527,49 @@ export async function POST(request, { params }) {
         service: body.service,
         check_in: body.checkIn,
         check_out: body.checkOut,
+        check_in_time: checkInTime,
+        check_out_time: checkOutTime,
         guests: Number(body.guests) || 2,
         nights,
         subtotal,
         discount,
-        amount,
+        amount: chargeAmount,
+        total_amount: totalBill,
+        paid_amount: 0,
+        pending_amount: isAdvanceBooking ? pendingBalance : 0,
+        payment_status: isAdvanceBooking ? 'advance' : 'unpaid',
+        advance_code: appliedAdvanceCode,
         applied_coupon: appliedCoupon,
+        aadhaar_number: formattedAadhaar,
+        notes: isShortStay ? `Short Stay (${checkInTime} to ${checkOutTime})` : (isEventService ? `Event: ${body.service} (${checkInTime} to ${checkOutTime})` : null),
         terms_accepted_at: new Date().toISOString(),
         terms_version: bookingTerms.version,
         terms_content: bookingTerms.terms,
         status: 'pending',
       }
-      const { error: insErr } = await admin.from('bookings').insert(record)
+      let { error: insErr } = await admin.from('bookings').insert(record)
+      if (insErr) {
+        // Fallback if custom columns don't exist yet in Supabase schema
+        const fallbackRecord = { ...record }
+        delete fallbackRecord.total_amount
+        delete fallbackRecord.paid_amount
+        delete fallbackRecord.pending_amount
+        delete fallbackRecord.payment_status
+        delete fallbackRecord.advance_code
+        delete fallbackRecord.aadhaar_number
+
+        const noteParts = []
+        if (record.aadhaar_number) noteParts.push(`Aadhaar: ${record.aadhaar_number}`)
+        if (isAdvanceBooking) noteParts.push(`Advance Deposit: ₹${depositAmount} | Pending Balance: ₹${pendingBalance} (Code: ${appliedAdvanceCode})`)
+        if (noteParts.length) {
+          fallbackRecord.notes = fallbackRecord.notes ? `${fallbackRecord.notes}\n${noteParts.join('\n')}` : noteParts.join('\n')
+        }
+        const fallbackRes = await admin.from('bookings').insert(fallbackRecord)
+        insErr = fallbackRes.error
+      }
       if (insErr) return NextResponse.json({ error: insErr.message }, { status: 500 })
 
-      const termsEmail = await sendBookingTermsEmail(record, bookingTerms)
-      return NextResponse.json({ ...record, termsEmail }, { status: 201 })
+      return NextResponse.json(record, { status: 201 })
     }
 
     // ---- Pricing update ----
@@ -344,8 +602,16 @@ export async function POST(request, { params }) {
       const guard = await requireRole(['manager', 'super_admin'])
       if (guard.error) return NextResponse.json({ error: guard.error }, { status: guard.status })
       if (!body.code || !body.value) return NextResponse.json({ error: 'Coupon code and value are required' }, { status: 400 })
+      const cleanCode = body.code.trim().toUpperCase()
+
+      // Check for duplicate code
+      const { data: existingCoupon } = await admin.from('coupons').select('id, code').eq('code', cleanCode).maybeSingle()
+      if (existingCoupon) {
+        return NextResponse.json({ error: `Coupon code "${cleanCode}" already exists. You can delete the existing one or use a different code.` }, { status: 400 })
+      }
+
       const record = {
-        code: body.code.trim().toUpperCase(),
+        code: cleanCode,
         type: body.type || 'percentage',
         value: Number(body.value),
         active: true,
@@ -408,25 +674,40 @@ export async function POST(request, { params }) {
 
     // ---- Razorpay: create order ----
     if (path[0] === 'razorpay' && path[1] === 'order') {
-      const { bookingId } = body
-      if (!bookingId) return NextResponse.json({ error: 'bookingId required' }, { status: 400 })
-      const { data: booking } = await admin.from('bookings').select('*').eq('id', bookingId).single()
-      if (!booking) return NextResponse.json({ error: 'Booking not found' }, { status: 404 })
+      const clientIp = getClientIp(request)
+      const limit = checkRateLimit(clientIp, 'razorpay_order', 15, 5 * 60 * 1000)
+      if (!limit.allowed) {
+        return NextResponse.json({ error: `Too many payment requests. Please try again in ${limit.resetInSeconds}s.` }, { status: 429 })
+      }
 
+      const { bookingId, type } = body
+      if (!bookingId) return NextResponse.json({ error: 'bookingId required' }, { status: 400 })
+      const { data: rawBooking } = await admin.from('bookings').select('*').eq('id', bookingId).single()
+      if (!rawBooking) return NextResponse.json({ error: 'Booking not found' }, { status: 404 })
+      const booking = enrichBookingWithAdvanceNotes(rawBooking)
+
+      const isBalance = type === 'balance'
+      const payAmount = isBalance ? (Number(booking.pending_amount) || Number(booking.amount)) : Number(booking.amount)
       const rzp = new Razorpay({ key_id: process.env.RAZORPAY_KEY_ID, key_secret: process.env.RAZORPAY_KEY_SECRET })
       const order = await rzp.orders.create({
-        amount: booking.amount * 100, // paise
+        amount: Math.round(payAmount * 100), // paise
         currency: 'INR',
-        receipt: booking.id,
-        notes: { bookingId: booking.id, service: booking.service, guest: booking.name },
+        receipt: `${booking.id}${isBalance ? '-BAL' : ''}`,
+        notes: { bookingId: booking.id, service: booking.service, guest: booking.name, type: isBalance ? 'balance' : 'initial' },
       })
       await admin.from('bookings').update({ razorpay_order_id: order.id }).eq('id', booking.id)
-      return NextResponse.json({ orderId: order.id, amount: order.amount, currency: order.currency, keyId: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID, booking })
+      return NextResponse.json({ orderId: order.id, amount: order.amount, currency: order.currency, keyId: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID, booking, payAmount })
     }
 
     // ---- Razorpay: verify signature ----
     if (path[0] === 'razorpay' && path[1] === 'verify') {
-      const { bookingId, razorpay_order_id, razorpay_payment_id, razorpay_signature } = body
+      const clientIp = getClientIp(request)
+      const limit = checkRateLimit(clientIp, 'razorpay_verify', 20, 5 * 60 * 1000)
+      if (!limit.allowed) {
+        return NextResponse.json({ error: `Too many verification requests. Please try again in ${limit.resetInSeconds}s.` }, { status: 429 })
+      }
+
+      const { bookingId, razorpay_order_id, razorpay_payment_id, razorpay_signature, type } = body
       if (!bookingId || !razorpay_order_id || !razorpay_payment_id || !razorpay_signature)
         return NextResponse.json({ error: 'Missing verification fields' }, { status: 400 })
 
@@ -438,17 +719,95 @@ export async function POST(request, { params }) {
       if (expected !== razorpay_signature)
         return NextResponse.json({ error: 'Invalid payment signature' }, { status: 400 })
 
-      const { data, error } = await admin.from('bookings').update({
+      const { data: rawExisting } = await admin.from('bookings').select('*').eq('id', bookingId).single()
+      if (!rawExisting) return NextResponse.json({ error: 'Booking not found' }, { status: 404 })
+      const existing = enrichBookingWithAdvanceNotes(rawExisting)
+
+      const isBalance = type === 'balance' || (existing.pending_amount > 0 && existing.paid)
+      const totalAmount = Number(existing.total_amount || (Number(existing.amount || 0) + Number(existing.pending_amount || 0)))
+
+      const updateData = isBalance ? {
         razorpay_payment_id,
         razorpay_signature,
         paid: true,
+        paid_amount: totalAmount,
+        pending_amount: 0,
+        payment_status: 'full',
         status: 'confirmed',
-      }).eq('id', bookingId).eq('paid', false).select().maybeSingle()
-      if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-      if (!data) return NextResponse.json({ error: 'This booking has already been marked as paid' }, { status: 409 })
+      } : {
+        razorpay_payment_id,
+        razorpay_signature,
+        paid: true,
+        paid_amount: existing.amount,
+        pending_amount: existing.pending_amount,
+        total_amount: totalAmount,
+        payment_status: existing.pending_amount > 0 ? 'advance' : 'full',
+        status: 'confirmed',
+      }
 
-      const email = await sendPaymentConfirmation(admin, data, 'Razorpay')
-      return NextResponse.json({ ok: true, booking: data, email })
+      let { data, error } = await admin.from('bookings').update(updateData).eq('id', bookingId).select().single()
+      if (error) {
+        const fallbackUpdate = {
+          razorpay_payment_id,
+          razorpay_signature,
+          paid: true,
+          status: 'confirmed',
+        }
+        if (isBalance) {
+          const updatedNotes = (existing.notes || '').replace(/Pending Balance:\s*₹\d+/i, 'Pending Balance: ₹0 (Cleared)')
+          fallbackUpdate.notes = updatedNotes
+        }
+        const fallbackRes = await admin.from('bookings').update(fallbackUpdate).eq('id', bookingId).select().single()
+        if (fallbackRes.error) return NextResponse.json({ error: fallbackRes.error.message }, { status: 500 })
+        data = fallbackRes.data
+      }
+
+      // Atomically commit coupon usage now that payment is confirmed
+      if (existing.applied_coupon && !isBalance) {
+        const { data: cp } = await admin.from('coupons').select('id, used').eq('code', existing.applied_coupon).single()
+        if (cp) {
+          await admin.from('coupons').update({ used: (cp.used || 0) + 1 }).eq('id', cp.id)
+        }
+      }
+
+      const enriched = enrichBookingWithAdvanceNotes(data)
+      const email = await sendPaymentConfirmation(admin, enriched, isBalance ? 'Razorpay (Balance settlement)' : 'Razorpay')
+      return NextResponse.json({ ok: true, booking: enriched, email })
+    }
+
+    // ---- Admin: create new admin user (super_admin only) ----
+    if (path[0] === 'admin' && path[1] === 'create-user') {
+      const guard = await requireRole(['super_admin'])
+      if (guard.error) return NextResponse.json({ error: guard.error }, { status: guard.status })
+
+      const { name, email, password, role, phone } = body
+      if (!name || !email || !password)
+        return NextResponse.json({ error: 'Name, email and password are required' }, { status: 400 })
+      if (password.length < 8)
+        return NextResponse.json({ error: 'Password must be at least 8 characters' }, { status: 400 })
+      if (!['staff', 'manager', 'super_admin'].includes(role))
+        return NextResponse.json({ error: 'Role must be staff, manager or super_admin' }, { status: 400 })
+
+      // Create user in Supabase Auth
+      const { data: newUser, error: createErr } = await admin.auth.admin.createUser({
+        email: email.trim().toLowerCase(),
+        password,
+        email_confirm: true,
+        user_metadata: { full_name: name.trim() },
+      })
+      if (createErr) return NextResponse.json({ error: createErr.message }, { status: 400 })
+
+      // Upsert profile with the assigned role
+      await admin.from('profiles').upsert({
+        id: newUser.user.id,
+        email: email.trim().toLowerCase(),
+        full_name: name.trim(),
+        phone: phone?.trim() || null,
+        role,
+        updated_at: new Date().toISOString(),
+      })
+
+      return NextResponse.json({ ok: true, id: newUser.user.id, email: newUser.user.email, role }, { status: 201 })
     }
 
     return NextResponse.json({ error: 'Route not found' }, { status: 404 })
@@ -484,29 +843,77 @@ export async function PATCH(request, { params }) {
       if (!Object.keys(patch).length) return NextResponse.json({ error: 'Nothing to update' }, { status: 400 })
       if (body.paid === true && !patch.status) patch.status = 'confirmed'
 
+      if (body.markBalance === true) {
+        const { data: rawExisting } = await admin.from('bookings').select('*').eq('id', path[1]).single()
+        if (!rawExisting) return NextResponse.json({ error: 'Booking not found' }, { status: 404 })
+        const existing = enrichBookingWithAdvanceNotes(rawExisting)
+        const total = Number(existing.total_amount || (Number(existing.amount || 0) + Number(existing.pending_amount || 0)))
+        let { data, error } = await admin.from('bookings').update({
+          paid: true,
+          paid_amount: total,
+          pending_amount: 0,
+          payment_status: 'full',
+          status: 'confirmed',
+        }).eq('id', path[1]).select().single()
+        if (error) {
+          const updatedNotes = (existing.notes || '').replace(/Pending Balance:\s*₹\d+/i, 'Pending Balance: ₹0 (Cleared)')
+          const fallbackRes = await admin.from('bookings').update({ paid: true, status: 'confirmed', notes: updatedNotes }).eq('id', path[1]).select().single()
+          if (fallbackRes.error) return NextResponse.json({ error: fallbackRes.error.message }, { status: 500 })
+          data = fallbackRes.data
+        }
+        const enriched = enrichBookingWithAdvanceNotes(data)
+        const email = await sendPaymentConfirmation(admin, enriched, 'Manual balance clearance')
+        return NextResponse.json({ ...enriched, email })
+      }
+
       // Only the request that flips unpaid → paid sends an invoice. This keeps retries and
       // multiple admin clicks from sending the same confirmation more than once.
       if (body.paid === true) {
-        const { data, error } = await admin.from('bookings').update(patch).eq('id', path[1]).eq('paid', false).select().maybeSingle()
-        if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+        const { data: rawExisting } = await admin.from('bookings').select('*').eq('id', path[1]).single()
+        if (!rawExisting) return NextResponse.json({ error: 'Booking not found' }, { status: 404 })
+        const existing = enrichBookingWithAdvanceNotes(rawExisting)
+
+        const updatePayload = {
+          ...patch,
+          paid_amount: existing.amount,
+          pending_amount: existing.pending_amount,
+          total_amount: existing.total_amount,
+          payment_status: existing.pending_amount > 0 ? 'advance' : 'full',
+        }
+
+        let { data, error } = await admin.from('bookings').update(updatePayload).eq('id', path[1]).eq('paid', false).select().maybeSingle()
+        if (error) {
+          const fallbackRes = await admin.from('bookings').update(patch).eq('id', path[1]).eq('paid', false).select().maybeSingle()
+          if (fallbackRes.error) return NextResponse.json({ error: fallbackRes.error.message }, { status: 500 })
+          data = fallbackRes.data
+        }
         if (!data) {
           const { data: current, error: currentError } = await admin.from('bookings').select('*').eq('id', path[1]).single()
           if (currentError || !current) return NextResponse.json({ error: 'Booking not found' }, { status: 404 })
           return NextResponse.json({ id: path[1], paid: current.paid, status: current.status, email: { sent: false, reason: 'already-paid' } })
         }
-        const email = await sendPaymentConfirmation(admin, data, 'manual admin verification')
-        return NextResponse.json({ ...data, email })
+        if (existing.applied_coupon) {
+          const { data: cp } = await admin.from('coupons').select('id, used').eq('code', existing.applied_coupon).single()
+          if (cp) {
+            await admin.from('coupons').update({ used: (cp.used || 0) + 1 }).eq('id', cp.id)
+          }
+        }
+        const enriched = enrichBookingWithAdvanceNotes(data)
+        const email = await sendPaymentConfirmation(admin, enriched, 'manual admin verification')
+        return NextResponse.json({ ...enriched, email })
       }
 
-      const { data: existing, error: existingError } = await admin.from('bookings').select('*').eq('id', path[1]).single()
-      if (existingError || !existing) return NextResponse.json({ error: 'Booking not found' }, { status: 404 })
+      const { data: rawExisting, error: existingError } = await admin.from('bookings').select('*').eq('id', path[1]).single()
+      if (existingError || !rawExisting) return NextResponse.json({ error: 'Booking not found' }, { status: 404 })
+      const existing = enrichBookingWithAdvanceNotes(rawExisting)
       const { data, error } = await admin.from('bookings').update(patch).eq('id', path[1]).select().single()
       if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+      const enriched = enrichBookingWithAdvanceNotes(data)
       // A manual status confirmation may happen before payment; only owners are notified in that case.
       const email = body.status === 'confirmed' && existing.status !== 'confirmed'
-        ? await sendPaymentConfirmation(admin, data, 'admin booking confirmation', { sendCustomer: false, sendOwners: true })
+        ? await sendPaymentConfirmation(admin, enriched, 'admin booking confirmation', { sendCustomer: false, sendOwners: true })
         : null
-      return NextResponse.json({ ...data, email })
+      return NextResponse.json({ ...enriched, email })
     }
 
     if (path[0] === 'coupons' && path[1]) {
@@ -545,6 +952,15 @@ export async function DELETE(request, { params }) {
     const path = (await params)?.path || []
     const admin = supabaseAdmin()
 
+    if (path[0] === 'advance-codes' && path[1]) {
+      const guard = await requireRole(['manager', 'super_admin'])
+      if (guard.error) return NextResponse.json({ error: guard.error }, { status: guard.status })
+      const codes = await getAdvanceCodes(admin)
+      const nextCodes = codes.filter(c => c.id !== path[1] && c.code !== path[1])
+      await saveAdvanceCodes(admin, nextCodes)
+      return NextResponse.json({ ok: true, id: path[1] })
+    }
+
     if (path[0] === 'coupons' && path[1]) {
       const guard = await requireRole(['manager', 'super_admin'])
       if (guard.error) return NextResponse.json({ error: guard.error }, { status: guard.status })
@@ -561,15 +977,26 @@ export async function DELETE(request, { params }) {
       return NextResponse.json({ ok: true, id: path[1] })
     }
 
-    // ---- Remove an assigned role (back to customer); the original super admin is protected ----
+    // ---- Remove an assigned role or delete user account (super_admin only, primary admin protected) ----
     if (path[0] === 'admin' && path[1] === 'customers' && path[2]) {
       const guard = await requireRole(['super_admin'])
       if (guard.error) return NextResponse.json({ error: guard.error }, { status: guard.status })
       const { data: firstAdmin } = await admin.from('profiles').select('id').eq('role', 'super_admin').order('created_at', { ascending: true }).limit(1).single()
-      if (firstAdmin?.id === path[2]) return NextResponse.json({ error: 'The original super admin role cannot be removed' }, { status: 403 })
-      const { error } = await admin.from('profiles').update({ role: 'customer' }).eq('id', path[2])
-      if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-      return NextResponse.json({ ok: true, id: path[2], role: 'customer' })
+      if (firstAdmin?.id === path[2]) return NextResponse.json({ error: 'The primary super admin account cannot be modified or deleted' }, { status: 403 })
+
+      const url = new URL(request.url)
+      const isPermanentDelete = url.searchParams.get('deleteUser') === 'true'
+
+      if (isPermanentDelete) {
+        await admin.from('profiles').delete().eq('id', path[2])
+        const { error: authErr } = await admin.auth.admin.deleteUser(path[2])
+        if (authErr) console.warn(`Auth user delete warning for ${path[2]}:`, authErr.message)
+        return NextResponse.json({ ok: true, id: path[2], deleted: true })
+      } else {
+        const { error } = await admin.from('profiles').update({ role: 'customer' }).eq('id', path[2])
+        if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+        return NextResponse.json({ ok: true, id: path[2], role: 'customer' })
+      }
     }
 
     return NextResponse.json({ error: 'Route not found' }, { status: 404 })

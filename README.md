@@ -197,10 +197,20 @@ Customers must read and accept the displayed booking terms before a booking requ
 Gmail requires a Google **App Password**; a normal account password will not work. If the Gmail variables are absent, the payment remains confirmed and the server logs that email delivery was skipped.
 - **Row-level security** is enabled on all tables; the API accesses data through the service-role client, and role checks happen in the route handler (`requireRole`).
 
+
 ## Payments in test mode
 
 - Use Razorpay **test keys** (`rzp_test_…`) — test UPI/cards succeed without real money.
 - The UPI fallback is fully functional without Razorpay: configure a UPI ID/QR in the admin dashboard, book something, and use *"Razorpay not working? Pay via UPI"*.
+
+## Documentation Guides
+
+For in-depth guides on specific system features, refer to the consolidated topic documentation in [`docs/`](docs/):
+
+- 📅 [**Bookings & Payments Guide**](docs/BOOKINGS_AND_PAYMENTS.md) — Booking workflows, same-day rules, Razorpay & UPI flows, terms enforcement, and partial payment plans.
+- 🏷️ [**Coupons & Promotions Guide**](docs/COUPONS_GUIDE.md) — Real-time validation, discount logic, usage limits, and admin coupon tools.
+- 🆔 [**Aadhaar Integration Guide**](docs/AADHAAR_GUIDE.md) — Form field format, validation, database persistence, and email invoices.
+- 🛠️ [**Changelog & Bug Fixes**](docs/CHANGELOG_AND_FIXES.md) — Summary of resolved issues and architectural improvements.
 
 ## Troubleshooting
 

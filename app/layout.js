@@ -1,4 +1,5 @@
 import './globals.css'
+import AiConcierge from '@/components/ai-concierge'
 
 export const metadata = {
   title: 'Siddhi Farm Resort | Come for the green',
@@ -6,5 +7,12 @@ export const metadata = {
 }
 
 export default function RootLayout({ children }) {
-  return <html lang="en"><body>{children}</body></html>
+  return (
+    <html lang="en">
+      <body>
+        {children}
+        <AiConcierge />
+      </body>
+    </html>
+  )
 }

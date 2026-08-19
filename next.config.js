@@ -8,9 +8,8 @@ const nextConfig = {
       { protocol: 'https', hostname: 'avatars.githubusercontent.com', pathname: '/**' },
     ],
   },
-  // Renamed from experimental.serverComponentsExternalPackages in Next 15
   // Keep server-only mail/report packages out of browser bundles.
-  serverExternalPackages: ['mongodb', 'exceljs', 'nodemailer'],
+  serverExternalPackages: ['exceljs', 'nodemailer'],
   webpack(config, { dev }) {
     if (dev) {
       // Reduce CPU/memory from file watching
@@ -31,11 +30,13 @@ const nextConfig = {
       {
         source: "/(.*)",
         headers: [
-          { key: "X-Frame-Options", value: "ALLOWALL" },
-          { key: "Content-Security-Policy", value: "frame-ancestors *;" },
+          { key: "X-Frame-Options", value: "SAMEORIGIN" },
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
           { key: "Access-Control-Allow-Origin", value: process.env.CORS_ORIGINS || "*" },
-          { key: "Access-Control-Allow-Methods", value: "GET, POST, PUT, DELETE, OPTIONS" },
-          { key: "Access-Control-Allow-Headers", value: "*" },
+          { key: "Access-Control-Allow-Methods", value: "GET, POST, PUT, PATCH, DELETE, OPTIONS" },
+          { key: "Access-Control-Allow-Headers", value: "X-Requested-With, Content-Type, Authorization" },
         ],
       },
     ];

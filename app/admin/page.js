@@ -2,9 +2,11 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Check, Clock3, Edit3, Image as ImageIcon, LayoutDashboard, LogOut, Percent, Plus, QrCode, RotateCcw, Save, ScrollText, ShieldCheck, Trash2, Upload, Users, Loader2, X } from 'lucide-react'
+import { ArrowLeft, Check, Clock3, Edit3, Image as ImageIcon, LayoutDashboard, LogOut, Percent, Plus, QrCode, RotateCcw, Save, ScrollText, ShieldCheck, Trash2, Upload, Users, Loader2, X, FileText, Share2, Printer } from 'lucide-react'
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser'
 import { IMAGE_SECTIONS } from '@/lib/siteImages'
+import { showSuccess, showError, showAlert, showConfirm, showToast } from '@/lib/swal'
+import { getWhatsAppShareUrl } from '@/lib/whatsapp'
 
 const labels = { masterBedroom: 'Master bedroom', villa2BHK: '2 BHK villa', villa4BHK: '4 BHK villa', oneDayTour: 'One day tour', miniWaterPark: 'One day tour + mini water park', weddingEvent: 'Wedding event', engagementEvent: 'Engagement event', birthdayEvent: 'Birthday event', getTogetherEvent: 'Get-together event' }
 
@@ -39,9 +41,13 @@ export default function AdminPage() {
   const [bookingTerms, setBookingTerms] = useState({ version: '', terms: [] })
   const [termsText, setTermsText] = useState('')
   const [termsSaved, setTermsSaved] = useState(false)
+  const [advanceCodes, setAdvanceCodes] = useState([])
+  const [advanceForm, setAdvanceForm] = useState({ code: '', percentage: '50', fixedAmount: '' })
+  const [newAdmin, setNewAdmin] = useState({ name: '', email: '', password: '', phone: '', role: 'staff' })
+  const [creatingAdmin, setCreatingAdmin] = useState(false)
 
   async function loadAll() {
-    const [p, s, b, c, i, pay, terms] = await Promise.all([
+    const [p, s, b, c, i, pay, terms, adv] = await Promise.all([
       fetch('/api/pricing'),
       fetch('/api/admin/summary'),
       fetch('/api/bookings'),
@@ -49,6 +55,7 @@ export default function AdminPage() {
       fetch('/api/images'),
       fetch('/api/payments/config'),
       fetch('/api/booking-terms'),
+      fetch('/api/advance-codes'),
     ])
     setPricing(await p.json())
     setSummary(await s.json())
@@ -59,6 +66,7 @@ export default function AdminPage() {
     const termsData = await terms.json()
     setBookingTerms(termsData)
     setTermsText((termsData.terms || []).join('\n'))
+    if (adv.ok) setAdvanceCodes(await adv.json())
 
     const cust = await fetch('/api/admin/customers')
     if (cust.ok) setCustomers(await cust.json())
@@ -69,6 +77,10 @@ export default function AdminPage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/login'); return }
       const { data: p } = await supabase.from('profiles').select('*').eq('id', user.id).single()
+      if (!p || !['staff', 'manager', 'super_admin'].includes(p.role)) {
+        router.push('/')
+        return
+      }
       setProfile(p)
       await loadAll()
     })()
@@ -77,6 +89,7 @@ export default function AdminPage() {
   async function savePricing() {
     await fetch('/api/pricing', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(pricing) })
     setSaved(true); setTimeout(() => setSaved(false), 1800)
+    showToast('Pricing rates updated successfully!')
   }
   async function savePricingMap(map) {
     setPricing(map)
@@ -92,44 +105,109 @@ export default function AdminPage() {
     while (key in pricing) key = `${key}_2`.slice(0, 40)
     setNewRate({ name: '', price: '' })
     savePricingMap({ ...pricing, [key]: price, _labels: { ...(pricing._labels || {}), [key]: name } })
+    showToast(`Added rate: ${name}`)
   }
-  function deleteRate(key) {
-    if (!window.confirm('Delete this rate? This cannot be undone.')) return
+  async function deleteRate(key) {
+    const ok = await showConfirm({ title: 'Delete Rate?', text: 'Are you sure you want to delete this custom rate? This cannot be undone.', isDanger: true })
+    if (!ok) return
     const next = { ...pricing, _labels: { ...(pricing._labels || {}) } }
     delete next[key]
     delete next._labels[key]
     savePricingMap(next)
+    showToast('Rate deleted')
   }
   async function createCoupon(event) {
     event.preventDefault()
-    await fetch('/api/coupons', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(coupon) })
-    setCoupon({ code: '', value: '', type: 'percentage' })
-    loadAll()
+    const res = await fetch('/api/coupons', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(coupon) })
+    if (res.ok) {
+      setCoupon({ code: '', value: '', type: 'percentage' })
+      showToast(`Coupon ${coupon.code.toUpperCase()} created!`)
+      loadAll()
+    } else {
+      const d = await res.json().catch(() => ({}))
+      showError('Coupon Creation Failed', d.error || 'Could not create coupon')
+    }
   }
   async function updateBooking(id, status) {
     const res = await fetch(`/api/bookings/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) })
     const data = await res.json().catch(() => ({}))
-    if (!res.ok) { window.alert(data.error || 'Could not update the booking'); return }
+    if (!res.ok) { showError('Update Failed', data.error || 'Could not update the booking'); return }
     if (status === 'confirmed' && data.email) {
-      window.alert(data.email.sent
-        ? `Owner report accepted for delivery to ${data.email.owners || 0} configured owner email address(es).`
-        : `Booking confirmed, but the owner email was not sent (${data.email.reason || 'unknown error'}).`)
+      if (data.email.sent) {
+        showSuccess('Booking Confirmed', `Owner report accepted for delivery to ${data.email.owners || 0} configured owner email address(es).`)
+      } else {
+        showAlert('Booking Confirmed', `Booking confirmed, but owner email was not sent (${data.email.reason || 'unknown error'}).`, 'warning')
+      }
+    } else {
+      showToast(`Booking marked as ${status}`)
     }
     loadAll()
   }
   async function deleteCoupon(id) {
-    if (!window.confirm('Delete this coupon? This cannot be undone.')) return
+    const ok = await showConfirm({ title: 'Delete Coupon?', text: 'Are you sure you want to delete this coupon?', isDanger: true })
+    if (!ok) return
     await fetch(`/api/coupons/${id}`, { method: 'DELETE' })
+    showToast('Coupon removed')
+    loadAll()
+  }
+  async function createAdvanceCode(event) {
+    event.preventDefault()
+    const code = advanceForm.code.trim().toUpperCase()
+    if (!code) return
+    const res = await fetch('/api/advance-codes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(advanceForm),
+    })
+    if (res.ok) {
+      setAdvanceForm({ code: '', percentage: '50', fixedAmount: '' })
+      showSuccess('Advance Code Created', `Single-use code "${code}" is ready to share with customer. It will auto-delete upon booking.`)
+      loadAll()
+    } else {
+      const d = await res.json().catch(() => ({}))
+      showError('Creation Failed', d.error || 'Failed to create advance code')
+    }
+  }
+  async function deleteAdvanceCode(id) {
+    const ok = await showConfirm({ title: 'Delete Advance Code?', text: 'Are you sure you want to delete this advance code?', isDanger: true })
+    if (!ok) return
+    await fetch(`/api/advance-codes/${id}`, { method: 'DELETE' })
+    showToast('Advance code deleted')
+    loadAll()
+  }
+  async function markBalancePaid(item) {
+    const bal = item.pending_amount || 0
+    const ok = await showConfirm({
+      title: 'Clear Remaining Balance?',
+      text: `Mark remaining balance of ₹${Number(bal).toLocaleString('en-IN')} as cleared for ${item.name}? This will mark the booking as fully paid and send the final clearance invoice.`,
+      confirmButtonText: 'Yes, Mark Balance Paid',
+      icon: 'question',
+    })
+    if (!ok) return
+    const res = await fetch(`/api/bookings/${item.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ markBalance: true }),
+    })
+    if (res.ok) {
+      showSuccess('Balance Cleared', `Booking ${item.id} is now marked 100% paid and confirmed. Clearance confirmation email dispatched.`)
+    } else {
+      const d = await res.json().catch(() => ({}))
+      showError('Error', d.error || 'Could not clear balance')
+    }
     loadAll()
   }
   async function deleteBooking(id) {
-    if (!window.confirm('Delete this booking request? This cannot be undone.')) return
+    const ok = await showConfirm({ title: 'Delete Booking Request?', text: 'Are you sure you want to delete this booking request? This cannot be undone.', isDanger: true })
+    if (!ok) return
     await fetch(`/api/bookings/${id}`, { method: 'DELETE' })
+    showToast('Booking deleted')
     loadAll()
   }
   async function setImageUrl(key, url) {
     const res = await fetch('/api/images', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key, url }) })
-    if (!res.ok) { const d = await res.json().catch(() => ({})); window.alert(d.error || 'Could not save image') }
+    if (!res.ok) { const d = await res.json().catch(() => ({})); showError('Save Failed', d.error || 'Could not save image'); return }
+    showToast('Image URL saved')
     loadAll()
   }
   function pickImageFile(key) {
@@ -142,20 +220,22 @@ export default function AdminPage() {
     fd.append('file', file)
     fd.append('key', key)
     const res = await fetch('/api/images/upload', { method: 'POST', body: fd })
-    if (!res.ok) { const d = await res.json().catch(() => ({})); window.alert(d.error || 'Upload failed') }
+    if (!res.ok) { const d = await res.json().catch(() => ({})); showError('Upload Failed', d.error || 'Upload failed') }
+    else { showToast('Image uploaded successfully') }
     setUploadingKey(null)
     loadAll()
   }
   async function savePayments() {
     const res = await fetch('/api/payments/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payments) })
-    if (!res.ok) { const d = await res.json().catch(() => ({})); window.alert(d.error || 'Could not save payment settings'); return }
+    if (!res.ok) { const d = await res.json().catch(() => ({})); showError('Save Failed', d.error || 'Could not save payment settings'); return }
     setPaySaved(true); setTimeout(() => setPaySaved(false), 1800)
+    showToast('Payment settings saved')
     loadAll()
   }
   async function saveBookingTerms() {
     const terms = termsText.split('\n').map(term => term.trim()).filter(Boolean)
     if (!bookingTerms.version.trim() || !terms.length) {
-      window.alert('Add a version and at least one term.')
+      showError('Validation Error', 'Please add a version number and at least one term.')
       return
     }
     const res = await fetch('/api/booking-terms', {
@@ -163,8 +243,9 @@ export default function AdminPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ version: bookingTerms.version, terms }),
     })
-    if (!res.ok) { const data = await res.json().catch(() => ({})); window.alert(data.error || 'Could not save booking terms'); return }
+    if (!res.ok) { const data = await res.json().catch(() => ({})); showError('Save Failed', data.error || 'Could not save booking terms'); return }
     setTermsSaved(true); setTimeout(() => setTermsSaved(false), 1800)
+    showToast('Booking terms saved')
     loadAll()
   }
   async function uploadQr(file) {
@@ -172,14 +253,27 @@ export default function AdminPage() {
     const fd = new FormData()
     fd.append('file', file)
     const res = await fetch('/api/payments/qr', { method: 'POST', body: fd })
-    if (!res.ok) { const d = await res.json().catch(() => ({})); window.alert(d.error || 'QR upload failed') }
+    if (!res.ok) { const d = await res.json().catch(() => ({})); showError('Upload Failed', d.error || 'QR upload failed') }
+    else { showToast('UPI QR uploaded') }
     setQrUploading(false)
     loadAll()
   }
   async function markPaid(item) {
     const claim = (item.notes || '').split('\n').filter(l => l.includes('UPI claim')).pop()
-    if (!window.confirm(`Mark booking ${item.id} as paid and confirmed?${claim ? `\n\n${claim}` : ''}`)) return
-    await fetch(`/api/bookings/${item.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ paid: true, status: 'confirmed' }) })
+    const ok = await showConfirm({
+      title: 'Confirm Payment & Booking',
+      text: `Mark booking ${item.id} (${item.name}) as paid and confirmed?${claim ? `\n\n${claim}` : ''}`,
+      confirmButtonText: 'Yes, Mark Paid & Confirm',
+      icon: 'question',
+    })
+    if (!ok) return
+    const res = await fetch(`/api/bookings/${item.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ paid: true, status: 'confirmed' }) })
+    if (res.ok) {
+      showSuccess('Payment Confirmed', `Booking ${item.id} is confirmed and invoice email has been sent.`)
+    } else {
+      const d = await res.json().catch(() => ({}))
+      showError('Failed', d.error || 'Could not mark booking paid')
+    }
     loadAll()
   }
   async function saveBookingTimes() {
@@ -187,19 +281,66 @@ export default function AdminPage() {
     setSavingTimes(true)
     const res = await fetch(`/api/bookings/${timeEditor.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ checkInTime: timeEditor.checkInTime, checkOutTime: timeEditor.checkOutTime }) })
     setSavingTimes(false)
-    if (!res.ok) { const d = await res.json().catch(() => ({})); window.alert(d.error || 'Could not save booking times'); return }
+    if (!res.ok) { const d = await res.json().catch(() => ({})); showError('Error', d.error || 'Could not save booking times'); return }
     setTimeEditor(null)
+    showToast('Booking times updated')
     loadAll()
   }
   async function changeRole(userId, role) {
     await fetch('/api/admin/customers', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId, role }) })
+    showToast(`Role updated to ${role}`)
     loadAll()
   }
+  async function createAdminUser(event) {
+    event.preventDefault()
+    if (!newAdmin.name.trim() || !newAdmin.email.trim() || !newAdmin.password) {
+      showError('Validation Error', 'Please enter a name, email address, and password.')
+      return
+    }
+    if (newAdmin.password.length < 8) {
+      showError('Password Too Short', 'Password must be at least 8 characters long.')
+      return
+    }
+    setCreatingAdmin(true)
+    const res = await fetch('/api/admin/create-user', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newAdmin),
+    })
+    const data = await res.json().catch(() => ({}))
+    setCreatingAdmin(false)
+    if (res.ok) {
+      showSuccess('Admin Account Created', `Created account for ${newAdmin.name} (${newAdmin.email}) with role "${newAdmin.role.replace('_', ' ')}".`)
+      setNewAdmin({ name: '', email: '', password: '', phone: '', role: 'staff' })
+      loadAll()
+    } else {
+      showError('Account Creation Failed', data.error || 'Failed to create user account')
+    }
+  }
   async function removeRole(userId) {
-    if (!window.confirm('Remove this assigned role? The user becomes a regular customer.')) return
+    const ok = await showConfirm({ title: 'Demote to Customer?', text: 'The user will be demoted back to a regular customer and lose dashboard access.', isDanger: true })
+    if (!ok) return
     const res = await fetch(`/api/admin/customers/${userId}`, { method: 'DELETE' })
-    if (!res.ok) { const d = await res.json().catch(() => ({})); window.alert(d.error || 'Could not remove role') }
+    if (!res.ok) { const d = await res.json().catch(() => ({})); showError('Error', d.error || 'Could not demote user'); return }
+    showToast('User demoted to regular customer')
     loadAll()
+  }
+  async function deleteUserAccount(userId, userName) {
+    const ok = await showConfirm({
+      title: 'Permanently Delete User?',
+      text: `Are you sure you want to permanently delete user "${userName || 'this account'}"? Their profile and authentication account will be completely removed.`,
+      confirmButtonText: 'Yes, Delete Permanently',
+      isDanger: true,
+    })
+    if (!ok) return
+    const res = await fetch(`/api/admin/customers/${userId}?deleteUser=true`, { method: 'DELETE' })
+    if (res.ok) {
+      showSuccess('User Deleted', `Account for "${userName || 'user'}" has been permanently removed.`)
+      loadAll()
+    } else {
+      const d = await res.json().catch(() => ({}))
+      showError('Delete Failed', d.error || 'Could not delete user account')
+    }
   }
   async function signOut() {
     await supabase.auth.signOut()
@@ -216,7 +357,12 @@ export default function AdminPage() {
   const sections = [
     ['overview', 'Overview'],
     ['bookings', 'Bookings'],
-    ...(canManagePricing ? [['pricing', 'Pricing & offers'], ['payments', 'Payments'], ['content', 'Images & terms']] : []),
+    ...(canManagePricing ? [
+      ['pricing', 'Pricing & offers'],
+      ['advance', 'Advance codes'],
+      ['payments', 'Payments'],
+      ['content', 'Images & terms']
+    ] : []),
     ...(canManageRoles ? [['customers', 'Admins']] : []),
   ]
 
@@ -333,6 +479,91 @@ export default function AdminPage() {
           </section>
         </div>}
 
+        {canManagePricing && tab === 'advance' && (
+          <section className="mt-8 rounded-2xl border border-[#dfe7dc] bg-white p-6 sm:p-8">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="eyebrow">Deposit & Partial Payments</p>
+                <h2 className="mt-2 font-serif text-2xl">Advance Payment Codes</h2>
+              </div>
+              <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-800">Single-Use (1x) Auto-Delete</span>
+            </div>
+            <div className="mt-4 rounded-xl bg-amber-50 border border-amber-200 p-4 text-xs text-amber-900 leading-relaxed">
+              <strong>💡 Strict Guideline:</strong> These are <strong>Advance Deposit Tokens</strong> (NOT discount coupons). They split the customer's total stay bill into a deposit today + pending balance due upon arrival. As soon as a customer completes a booking with a code, it is <strong>automatically deleted</strong> from this window so it cannot be reused.
+            </div>
+
+            <div className="mt-6 grid gap-8 lg:grid-cols-[1fr_1.3fr]">
+              <form onSubmit={createAdvanceCode} className="rounded-xl border border-[#dfe7dc] bg-[#f9faf6] p-5 space-y-4">
+                <h3 className="font-semibold text-sm text-[#173d35]">Generate 1-Time Advance Code</h3>
+                <label className="block">Code Name
+                  <input
+                    required
+                    placeholder="ADVANCE50"
+                    value={advanceForm.code}
+                    onChange={e => setAdvanceForm({ ...advanceForm, code: e.target.value.toUpperCase() })}
+                    className="mt-1 w-full uppercase font-mono tracking-wider"
+                  />
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  <label className="block">Deposit Percentage (%)
+                    <input
+                      type="number"
+                      min="1"
+                      max="99"
+                      placeholder="50"
+                      value={advanceForm.percentage}
+                      onChange={e => setAdvanceForm({ ...advanceForm, percentage: e.target.value, fixedAmount: '' })}
+                      className="mt-1 w-full"
+                    />
+                  </label>
+                  <label className="block">OR Fixed Deposit (₹)
+                    <input
+                      type="number"
+                      min="1"
+                      placeholder="Optional"
+                      value={advanceForm.fixedAmount}
+                      onChange={e => setAdvanceForm({ ...advanceForm, fixedAmount: e.target.value, percentage: '' })}
+                      className="mt-1 w-full"
+                    />
+                  </label>
+                </div>
+                <p className="text-[11px] text-slate-500">Default is 50% advance deposit. The guest pays 50% online and owes the remaining 50% at check-in.</p>
+                <button className="button-primary w-full" type="submit">
+                  <Plus size={16} /> Create Single-Use Advance Code
+                </button>
+              </form>
+
+              <div>
+                <h3 className="font-semibold text-sm text-[#173d35] mb-3">Active Advance Codes ({advanceCodes.length})</h3>
+                <div className="space-y-2">
+                  {advanceCodes.length ? advanceCodes.map(item => (
+                    <div className="flex items-center justify-between rounded-xl border border-[#e5ebe1] bg-white px-4 py-3 text-sm shadow-sm" key={item.id}>
+                      <div>
+                        <strong className="font-mono text-base text-[#173d35]">{item.code}</strong>
+                        <span className="ml-2 rounded-md bg-blue-50 px-2 py-0.5 text-xs text-blue-700 font-medium">
+                          {item.percentage ? `${item.percentage}% Deposit` : `₹${item.fixedAmount} Deposit`}
+                        </span>
+                        <p className="text-[11px] text-slate-400 mt-0.5">Single-use · Auto-deletes on booking</p>
+                      </div>
+                      <button
+                        onClick={() => deleteAdvanceCode(item.id)}
+                        title="Delete code"
+                        className="rounded-full p-2 text-red-500 hover:bg-red-50"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  )) : (
+                    <div className="rounded-xl border border-dashed border-[#cfdacc] p-8 text-center text-sm text-slate-400">
+                      No active advance codes. Create one on the left to share with a customer.
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
+
         {canManagePricing && tab === 'payments' && (
           <section className="mt-8 rounded-2xl border border-[#dfe7dc] bg-white p-6">
             <div className="flex items-center justify-between">
@@ -442,20 +673,61 @@ export default function AdminPage() {
                       <button onClick={() => setTimeEditor({ id: item.id, name: item.name, checkInTime: item.check_in_time?.slice(0, 5) || '11:00', checkOutTime: item.check_out_time?.slice(0, 5) || '10:00' })} className="mt-1 flex items-center gap-1 text-[10px] text-[#315d4c] hover:underline"><Clock3 size={12} /> Set times</button>
                     </td>
                     <td className="py-4 text-xs text-slate-500">{item.check_in} → {item.check_out}</td>
-                    <td className="py-4">₹{Number(item.amount || 0).toLocaleString('en-IN')}</td>
-                    <td className="py-4">{item.paid ? <span className="rounded-full bg-green-100 px-2 py-1 text-xs text-green-700">Paid</span> : (
-                      <span className="flex flex-col items-start gap-1">
-                        {(item.notes || '').includes('UPI claim') && <span className="rounded-full bg-amber-100 px-2 py-1 text-[10px] text-amber-700" title={item.notes}>UPI claimed</span>}
-                        <button onClick={() => markPaid(item)} className="rounded-full border border-[#b7c7b8] px-2 py-1 text-[10px] text-[#315d4c] hover:bg-[#e3eee1]">Mark paid</button>
-                      </span>
-                    )}</td>
+                    <td className="py-4 font-semibold text-xs">
+                      ₹{Number(item.total_amount || (Number(item.amount || 0) + Number(item.pending_amount || 0))).toLocaleString('en-IN')}
+                    </td>
                     <td className="py-4">
-                      <select className="m-0 w-auto py-2 text-xs" value={item.status} onChange={e => updateBooking(item.id, e.target.value)}>
-                        <option value="pending">Pending</option>
-                        <option value="confirmed">Confirmed</option>
-                        <option value="cancelled">Cancelled</option>
-                        <option value="completed">Completed</option>
-                      </select>
+                      {item.pending_amount > 0 ? (
+                        <div className="flex flex-col items-start gap-1">
+                          <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[11px] font-semibold text-blue-800">
+                            Adv. ₹{Number(item.paid_amount || (item.paid ? item.amount : 0)).toLocaleString('en-IN')}
+                          </span>
+                          <span className="text-[10px] font-bold text-amber-700">
+                            ₹{Number(item.pending_amount).toLocaleString('en-IN')} Pending
+                          </span>
+                          <button
+                            onClick={() => markBalancePaid(item)}
+                            className="mt-0.5 rounded-full border border-green-600 bg-green-50 px-2 py-0.5 text-[10px] font-medium text-green-800 hover:bg-green-100"
+                          >
+                            Clear balance
+                          </button>
+                        </div>
+                      ) : item.paid ? (
+                        <span className="rounded-full bg-green-100 px-2 py-1 text-xs text-green-700">Paid in full ✓</span>
+                      ) : (
+                        <span className="flex flex-col items-start gap-1">
+                          {(item.notes || '').includes('UPI claim') && <span className="rounded-full bg-amber-100 px-2 py-1 text-[10px] text-amber-700" title={item.notes}>UPI claimed</span>}
+                          <button onClick={() => markPaid(item)} className="rounded-full border border-[#b7c7b8] px-2 py-1 text-[10px] text-[#315d4c] hover:bg-[#e3eee1]">Mark paid</button>
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-4">
+                      <div className="flex items-center gap-2">
+                        <select className="m-0 w-auto py-1.5 text-xs font-medium" value={item.status} onChange={e => updateBooking(item.id, e.target.value)}>
+                          <option value="pending">Pending</option>
+                          <option value="confirmed">Confirmed</option>
+                          <option value="cancelled">Cancelled</option>
+                          <option value="completed">Completed</option>
+                        </select>
+                        <a
+                          href={getWhatsAppShareUrl(item)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title="Send Booking Invoice & Terms via WhatsApp"
+                          className="flex items-center justify-center rounded-lg bg-[#25D366]/10 p-2 text-[#25D366] hover:bg-[#25D366] hover:text-white"
+                        >
+                          <Share2 size={14} />
+                        </a>
+                        <a
+                          href={`/invoice/${item.id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title="View / Print PDF Tax Invoice"
+                          className="flex items-center justify-center rounded-lg bg-[#173d35]/10 p-2 text-[#173d35] hover:bg-[#173d35] hover:text-white"
+                        >
+                          <FileText size={14} />
+                        </a>
+                      </div>
                     </td>
                     {canDelete && (
                       <td className="py-4">
@@ -485,43 +757,164 @@ export default function AdminPage() {
         )}
 
         {canManageRoles && tab === 'customers' && (
-          <section className="mt-8 rounded-2xl border border-[#dfe7dc] bg-white p-6">
-            <div className="flex items-center gap-2"><Users size={18} /><p className="eyebrow">Team & customers</p></div>
-            <h2 className="mt-2 font-serif text-2xl">Assign roles</h2>
-            <p className="mt-1 text-sm text-slate-500">Promote a customer to staff, manager or super admin.</p>
-            <div className="mt-5 overflow-x-auto">
-              <table className="w-full min-w-[600px] text-left text-sm">
-                <thead className="border-b border-[#e5ebe1] text-xs uppercase tracking-wider text-slate-400">
-                  <tr><th className="pb-3">Name</th><th className="pb-3">Email</th><th className="pb-3">Phone</th><th className="pb-3">Role</th><th className="pb-3"><span className="sr-only">Remove role</span></th></tr>
-                </thead>
-                <tbody>
-                  {customers.map(user => (
-                    <tr className="border-b border-[#eef2eb]" key={user.id}>
-                      <td className="py-3">{user.full_name || '—'}</td>
-                      <td className="py-3">{user.email}</td>
-                      <td className="py-3">{user.phone || '—'}</td>
-                      <td className="py-3">
-                        <select className="m-0 w-auto py-2 text-xs" value={user.role} onChange={e => changeRole(user.id, e.target.value)} disabled={user.id === rootAdminId}>
-                          <option value="customer">Customer</option>
-                          <option value="staff">Staff</option>
-                          <option value="manager">Manager</option>
-                          <option value="super_admin">Super Admin</option>
-                        </select>
-                      </td>
-                      <td className="py-3">
-                        {user.id === rootAdminId ? (
-                          <span className="flex items-center gap-1 text-xs text-slate-400" title="The original super admin cannot be changed"><ShieldCheck size={14} /> Primary</span>
-                        ) : user.role !== 'customer' ? (
-                          <button onClick={() => removeRole(user.id)} title="Remove assigned role" className="rounded-full p-2 text-red-500 hover:bg-red-100"><Trash2 size={15} /></button>
-                        ) : null}
-                      </td>
+          <div className="space-y-8">
+            {/* Create New Admin User Form */}
+            <section className="rounded-2xl border border-[#dfe7dc] bg-white p-6 shadow-sm">
+              <div className="flex items-center gap-2"><Plus size={18} className="text-[#173d35]" /><p className="eyebrow">User Management</p></div>
+              <h2 className="mt-2 font-serif text-2xl">Add New Admin or Staff</h2>
+              <p className="mt-1 text-sm text-slate-500">Create a new authenticated account and assign their administrative role directly.</p>
+
+              <form onSubmit={createAdminUser} className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+                <label className="text-xs font-semibold text-slate-700">
+                  Full Name *
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. John Doe"
+                    value={newAdmin.name}
+                    onChange={e => setNewAdmin({ ...newAdmin, name: e.target.value })}
+                    className="mt-1.5 w-full rounded-xl border border-[#dfe7dc] bg-[#fbfdf9] px-3 py-2 text-sm text-[#173d35]"
+                  />
+                </label>
+
+                <label className="text-xs font-semibold text-slate-700">
+                  Email Address *
+                  <input
+                    type="email"
+                    required
+                    placeholder="admin@siddhifarm.com"
+                    value={newAdmin.email}
+                    onChange={e => setNewAdmin({ ...newAdmin, email: e.target.value })}
+                    className="mt-1.5 w-full rounded-xl border border-[#dfe7dc] bg-[#fbfdf9] px-3 py-2 text-sm text-[#173d35]"
+                  />
+                </label>
+
+                <label className="text-xs font-semibold text-slate-700">
+                  Password (min 8 chars) *
+                  <input
+                    type="password"
+                    required
+                    minLength={8}
+                    placeholder="••••••••"
+                    value={newAdmin.password}
+                    onChange={e => setNewAdmin({ ...newAdmin, password: e.target.value })}
+                    className="mt-1.5 w-full rounded-xl border border-[#dfe7dc] bg-[#fbfdf9] px-3 py-2 text-sm text-[#173d35]"
+                  />
+                </label>
+
+                <label className="text-xs font-semibold text-slate-700">
+                  Role *
+                  <select
+                    value={newAdmin.role}
+                    onChange={e => setNewAdmin({ ...newAdmin, role: e.target.value })}
+                    className="mt-1.5 w-full rounded-xl border border-[#dfe7dc] bg-[#fbfdf9] px-3 py-2 text-sm text-[#173d35]"
+                  >
+                    <option value="staff">Staff</option>
+                    <option value="manager">Manager</option>
+                    <option value="super_admin">Super Admin</option>
+                  </select>
+                </label>
+
+                <div className="flex items-end">
+                  <button
+                    type="submit"
+                    disabled={creatingAdmin}
+                    className="flex h-[42px] w-full items-center justify-center gap-2 rounded-xl bg-[#173d35] px-4 font-semibold text-white shadow hover:bg-[#1f4e44] disabled:opacity-50"
+                  >
+                    {creatingAdmin ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
+                    {creatingAdmin ? 'Creating…' : 'Add Admin'}
+                  </button>
+                </div>
+              </form>
+            </section>
+
+            {/* Team and User Management Table */}
+            <section className="rounded-2xl border border-[#dfe7dc] bg-white p-6 shadow-sm">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-2"><Users size={18} className="text-[#173d35]" /><p className="eyebrow">Team & Customers</p></div>
+                  <h2 className="mt-2 font-serif text-2xl">Registered Users & Roles</h2>
+                  <p className="mt-1 text-sm text-slate-500">Manage permissions, promote team members, or delete accounts.</p>
+                </div>
+                <span className="rounded-full bg-[#eef4ec] px-3 py-1 text-xs font-medium text-[#173d35]">
+                  {customers.length} total users
+                </span>
+              </div>
+
+              <div className="mt-6 overflow-x-auto">
+                <table className="w-full min-w-[650px] text-left text-sm">
+                  <thead className="border-b border-[#e5ebe1] text-xs uppercase tracking-wider text-slate-400">
+                    <tr>
+                      <th className="pb-3">User</th>
+                      <th className="pb-3">Email</th>
+                      <th className="pb-3">Phone</th>
+                      <th className="pb-3">Role</th>
+                      <th className="pb-3 text-right">Actions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-              {!customers.length && <p className="py-8 text-center text-sm text-slate-400">No users yet. Once someone signs up they'll appear here.</p>}
-            </div>
-          </section>
+                  </thead>
+                  <tbody>
+                    {customers.map(user => {
+                      const isRoot = user.id === rootAdminId
+                      return (
+                        <tr className="border-b border-[#eef2eb] transition-colors hover:bg-[#fbfcfb]" key={user.id}>
+                          <td className="py-3 font-medium text-slate-900">
+                            <div className="flex items-center gap-2">
+                              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#173d35]/10 text-xs font-bold text-[#173d35]">
+                                {(user.full_name || user.email || 'U').charAt(0).toUpperCase()}
+                              </div>
+                              <span>{user.full_name || '—'}</span>
+                            </div>
+                          </td>
+                          <td className="py-3 text-slate-600">{user.email}</td>
+                          <td className="py-3 text-slate-500">{user.phone || '—'}</td>
+                          <td className="py-3">
+                            <select
+                              className="m-0 w-auto rounded-lg border border-slate-200 bg-white py-1.5 pl-2.5 pr-8 text-xs font-medium text-slate-800"
+                              value={user.role}
+                              onChange={e => changeRole(user.id, e.target.value)}
+                              disabled={isRoot}
+                            >
+                              <option value="customer">Customer</option>
+                              <option value="staff">Staff</option>
+                              <option value="manager">Manager</option>
+                              <option value="super_admin">Super Admin</option>
+                            </select>
+                          </td>
+                          <td className="py-3 text-right">
+                            {isRoot ? (
+                              <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 bg-amber-50 px-2 py-1 rounded-md" title="The primary super admin cannot be modified">
+                                <ShieldCheck size={13} /> Primary Owner
+                              </span>
+                            ) : (
+                              <div className="inline-flex items-center gap-1.5">
+                                {user.role !== 'customer' && (
+                                  <button
+                                    onClick={() => removeRole(user.id)}
+                                    title="Demote back to regular customer"
+                                    className="rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700 hover:bg-amber-100"
+                                  >
+                                    Demote
+                                  </button>
+                                )}
+                                <button
+                                  onClick={() => deleteUserAccount(user.id, user.full_name || user.email)}
+                                  title="Permanently delete user account"
+                                  className="rounded-lg border border-red-200 bg-red-50 p-1.5 text-red-600 hover:bg-red-100 hover:text-red-700"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+                {!customers.length && <p className="py-8 text-center text-sm text-slate-400">No users registered yet.</p>}
+              </div>
+            </section>
+          </div>
         )}
       </div>
     </main>

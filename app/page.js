@@ -2,11 +2,12 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Script from 'next/script'
-import { ArrowUpRight, CalendarDays, Check, ChevronDown, CreditCard, Instagram, LogOut, MapPin, Menu, Phone, Sparkles, Star, User, Waves, X } from 'lucide-react'
+import { ArrowUpRight, CalendarDays, Check, ChevronDown, CreditCard, Instagram, LogOut, MapPin, Menu, Phone, Sparkles, Star, User, Waves, X, Printer, Share2 } from 'lucide-react'
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser'
 import { siteImage } from '@/lib/siteImages'
 import UpiPayment from '@/components/upi-payment'
 import BookingTerms from '@/components/booking-terms'
+import { getWhatsAppShareUrl } from '@/lib/whatsapp'
 
 const experiences = [
   ['farm-stays', 'Farm stays', 'Wake up to birdsong in our spacious master bedrooms and private villas.', 'masterBedroom', 'per night'],
@@ -21,20 +22,159 @@ const stayCards = [
 const serviceKeys = { 'Master Bedroom': 'masterBedroom', '2 BHK Villa': 'villa2BHK', '4 BHK Villa': 'villa4BHK', 'One Day Tour': 'oneDayTour', 'Mini Water Park': 'miniWaterPark', 'Wedding Ceremony': 'weddingEvent', 'Engagement Ceremony': 'engagementEvent', 'Birthday Party': 'birthdayEvent', 'Get Together': 'getTogetherEvent' }
 
 function BookingPanel({ pricing, user, onClose }) {
-  const [form, setForm] = useState({ name: user?.user_metadata?.full_name || '', email: user?.email || '', phone: user?.user_metadata?.phone || '', checkIn: '', checkOut: '', service: 'Master Bedroom', guests: '2', couponCode: '', termsAccepted: false })
+  const [form, setForm] = useState({ name: user?.user_metadata?.full_name || '', email: user?.email || '', phone: user?.user_metadata?.phone || '', checkIn: '', checkOut: '', service: 'Master Bedroom', guests: '2', couponCode: '', aadhaarNumber: '', termsAccepted: false })
+  const [stayType, setStayType] = useState('overnight') // 'overnight' | 'short_stay'
+  const [shortStaySlot, setShortStaySlot] = useState('10:00-15:00') // 10:00 to 15:00
+  const [eventSlot, setEventSlot] = useState('09:00-22:00')
   const [booking, setBooking] = useState(null)
   const [status, setStatus] = useState('idle') // idle | booking | paying | paid | error
   const [error, setError] = useState('')
+  const [appliedCoupon, setAppliedCoupon] = useState(null)
+  const [appliedAdvance, setAppliedAdvance] = useState(null)
+  const [discount, setDiscount] = useState(0)
+  const [allCoupons, setAllCoupons] = useState([])
 
-  const nights = form.checkIn && form.checkOut ? Math.max(1, Math.ceil((new Date(form.checkOut) - new Date(form.checkIn)) / 86400000)) : 1
-  const rate = pricing[serviceKeys[form.service]] || 0
-  const estimate = rate * nights
+  const isEvent = ['Engagement Ceremony', 'Birthday Party', 'Get Together', 'Wedding Ceremony'].includes(form.service)
+  const isDayTour = ['One Day Tour', 'Mini Water Park'].includes(form.service)
+  const isRoom = ['Master Bedroom', '2 BHK Villa', '4 BHK Villa'].includes(form.service)
+  const isSingleDay = isEvent || isDayTour || (isRoom && stayType === 'short_stay')
+
+  const nights = form.checkIn && form.checkOut && !isSingleDay
+    ? Math.max(1, Math.ceil((new Date(form.checkOut) - new Date(form.checkIn)) / 86400000))
+    : 1
+  const rate = Number(pricing[serviceKeys[form.service]] || 0)
+  
+  let subtotal = 0
+  if (isRoom && stayType === 'short_stay') {
+    subtotal = Math.round(rate * 0.5)
+  } else if (isEvent) {
+    subtotal = rate
+  } else if (isDayTour) {
+    subtotal = rate * Math.max(1, Number(form.guests) || 1)
+  } else {
+    subtotal = rate * nights
+  }
+  
+  const estimate = Math.max(0, Number(subtotal) - Number(discount || 0))
+
+  const advanceDeposit = appliedAdvance
+    ? (appliedAdvance.percentage ? Math.round(estimate * Math.min(100, appliedAdvance.percentage) / 100) : Math.min(estimate, Number(appliedAdvance.fixedAmount || 0)))
+    : null
+  const advancePending = advanceDeposit !== null ? Math.max(0, estimate - advanceDeposit) : 0
+
+  // Load all coupons once
+  useEffect(() => {
+    async function loadCoupons() {
+      try {
+        const res = await fetch('/api/coupons')
+        const coupons = await res.json()
+        setAllCoupons(coupons || [])
+      } catch (err) {
+        console.error('Error loading coupons:', err)
+      }
+    }
+    loadCoupons()
+  }, [])
+
+  // Re-validate coupon whenever subtotal changes (dates or guests change)
+  useEffect(() => {
+    if (form.couponCode) {
+      validateCouponWithSubtotal(form.couponCode, subtotal)
+    }
+  }, [subtotal, allCoupons])
+
+  // Real-time coupon/advance code validation with explicit subtotal parameter
+  async function validateCouponWithSubtotal(code, currentSubtotal) {
+    const normalizedCode = (code || '').trim().toUpperCase()
+    if (!normalizedCode) {
+      setAppliedCoupon(null)
+      setAppliedAdvance(null)
+      setDiscount(0)
+      return
+    }
+
+    const coupon = allCoupons.find(c => c.code.toUpperCase() === normalizedCode && c.active)
+    
+    if (coupon) {
+      if (coupon.expires_at && new Date(coupon.expires_at) < new Date()) {
+        setAppliedCoupon(null)
+        setDiscount(0)
+        return
+      }
+
+      const subtotalValue = Number(currentSubtotal) || 0
+      const minAmount = Number(coupon.min_amount ?? coupon.minimum_amount ?? 0)
+      if (subtotalValue < minAmount) {
+        setAppliedCoupon(null)
+        setDiscount(0)
+        return
+      }
+
+      const discountType = coupon.discount_type || coupon.type || 'percentage'
+      const discountValue = Number(coupon.discount_value ?? coupon.value ?? 0)
+      const maxDiscount = Number(coupon.max_discount ?? 0)
+
+      let discountAmount = 0
+      if (discountType === 'percentage') {
+        discountAmount = (subtotalValue * discountValue) / 100
+        if (maxDiscount > 0) discountAmount = Math.min(discountAmount, maxDiscount)
+      } else {
+        discountAmount = discountValue
+      }
+
+      const safeDiscount = Number.isFinite(discountAmount) ? Math.max(0, Math.round(discountAmount)) : 0
+      setAppliedCoupon(coupon)
+      setAppliedAdvance(null)
+      setDiscount(safeDiscount)
+      return
+    }
+
+    // Check if matching an Advance Code
+    try {
+      const advRes = await fetch(`/api/advance-codes/validate?code=${encodeURIComponent(normalizedCode)}`)
+      const advData = await advRes.json()
+      if (advData.valid) {
+        setAppliedAdvance(advData)
+        setAppliedCoupon(null)
+        setDiscount(0)
+        return
+      }
+    } catch {}
+
+    setAppliedCoupon(null)
+    setAppliedAdvance(null)
+    setDiscount(0)
+  }
+
+  // Handle coupon/advance code change
+  const handleCouponChange = (e) => {
+    const code = e.target.value
+    setForm(prev => ({ ...prev, couponCode: code }))
+    validateCouponWithSubtotal(code, subtotal)
+  }
 
   async function createBooking(event) {
     event.preventDefault()
     setStatus('booking'); setError('')
     try {
-      const res = await fetch('/api/bookings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) })
+      const [inTime, outTime] = (isRoom && stayType === 'short_stay')
+        ? shortStaySlot.split('-')
+        : isEvent
+        ? eventSlot.split('-')
+        : isDayTour
+        ? ['09:30', '18:00']
+        : ['11:00', '10:00']
+
+      const payload = {
+        ...form,
+        checkOut: isSingleDay ? form.checkIn : form.checkOut,
+        checkInTime: inTime,
+        checkOutTime: outTime,
+        isShortStay: isRoom && stayType === 'short_stay',
+        stayType: isRoom && stayType === 'short_stay' ? 'short_stay' : (isEvent ? 'event' : (isDayTour ? 'day_tour' : 'overnight')),
+      }
+
+      const res = await fetch('/api/bookings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Booking failed')
       setBooking(data); setStatus('idle')
@@ -91,11 +231,33 @@ function BookingPanel({ pricing, user, onClose }) {
         </div>
 
         {status === 'paid' ? (
-          <div className="rounded-2xl bg-[#e5efe4] p-7 text-center">
+          <div className="rounded-2xl bg-[#e5efe4] p-7 text-center text-[#173d35]">
             <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[#315d4c] text-white"><Check /></div>
             <h3 className="font-serif text-2xl text-[#173d35]">Payment successful</h3>
             <p className="mt-2 text-sm text-slate-600">Booking <strong>{booking.id}</strong> is confirmed. A team member will be in touch shortly.</p>
-            <button className="button-primary mt-6" onClick={onClose}>Done</button>
+            
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+              <a
+                href={getWhatsAppShareUrl(booking)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 rounded-xl bg-[#25D366] px-4 py-2.5 text-sm font-semibold text-white shadow transition hover:bg-[#20bd5a]"
+              >
+                <Share2 size={16} /> Send to WhatsApp
+              </a>
+              <a
+                href={`/invoice/${booking.id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 rounded-xl bg-[#173d35] px-4 py-2.5 text-sm font-semibold text-white shadow transition hover:bg-[#1f4e44]"
+              >
+                <Printer size={16} /> View PDF Invoice
+              </a>
+            </div>
+
+            <div className="mt-4">
+              <button className="button-outline text-xs" onClick={onClose}>Close window</button>
+            </div>
           </div>
         ) : booking ? (
           <div className="rounded-2xl border border-[#dfe7dc] bg-white p-6 text-sm text-[#173d35]">
@@ -119,15 +281,173 @@ function BookingPanel({ pricing, user, onClose }) {
             <input required placeholder="Your name" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
             <input required placeholder="Phone number" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} />
             <label className="sm:col-span-2">Email (for confirmation)<input required type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} /></label>
-            <label>Check in<input required type="date" value={form.checkIn} onChange={e => setForm({ ...form, checkIn: e.target.value })} /></label>
-            <label>Check out<input required type="date" value={form.checkOut} onChange={e => setForm({ ...form, checkOut: e.target.value })} /></label>
-            <label>Stay, day tour or event<select value={form.service} onChange={e => setForm({ ...form, service: e.target.value })}>{Object.keys(serviceKeys).map(item => <option key={item}>{item}</option>)}</select></label>
-            <label>Guests<input required type="number" min="1" value={form.guests} onChange={e => setForm({ ...form, guests: e.target.value })} /></label>
-            <label className="sm:col-span-2">Coupon code (optional)<input placeholder="MONSOON30" value={form.couponCode} onChange={e => setForm({ ...form, couponCode: e.target.value })} /></label>
-            <div className="flex items-center justify-between rounded-xl bg-[#edf1e8] p-4 text-sm sm:col-span-2">
-              <span>Estimated total · {nights} night{nights > 1 ? 's' : ''}</span>
-              <strong className="text-lg text-[#173d35]">₹{estimate.toLocaleString('en-IN')}</strong>
-            </div>
+            
+            <label className="sm:col-span-2">
+              Stay, Day Tour or Event
+              <select value={form.service} onChange={e => {
+                const s = e.target.value
+                setForm({ ...form, service: s })
+              }}>
+                {Object.keys(serviceKeys).map(item => <option key={item}>{item}</option>)}
+              </select>
+            </label>
+
+            {/* Room Stay Options: Overnight vs 4-5 Hours Day Use */}
+            {isRoom && (
+              <div className="sm:col-span-2 rounded-2xl border border-[#dfe7dc] bg-white p-3.5 shadow-sm">
+                <p className="text-xs font-bold uppercase tracking-wider text-[#315d4c]">Select Stay Duration</p>
+                <div className="mt-2 grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setStayType('overnight')}
+                    className={`rounded-xl px-3 py-2.5 text-xs font-semibold transition text-left flex flex-col ${
+                      stayType === 'overnight'
+                        ? 'bg-[#173d35] text-white shadow'
+                        : 'bg-[#f4f7f2] text-[#173d35] hover:bg-[#e7eee4]'
+                    }`}
+                  >
+                    <span>🌙 Full Overnight Stay</span>
+                    <span className={`text-[10px] mt-0.5 ${stayType === 'overnight' ? 'text-slate-200' : 'text-slate-500'}`}>11:00 AM → Next day 10:00 AM</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStayType('short_stay')
+                      if (form.checkIn) setForm(prev => ({ ...prev, checkOut: prev.checkIn }))
+                    }}
+                    className={`rounded-xl px-3 py-2.5 text-xs font-semibold transition text-left flex flex-col ${
+                      stayType === 'short_stay'
+                        ? 'bg-[#315d4c] text-white shadow'
+                        : 'bg-[#f4f7f2] text-[#173d35] hover:bg-[#e7eee4]'
+                    }`}
+                  >
+                    <span>☀️ Day Use / Short Stay (4–5 Hrs)</span>
+                    <span className={`text-[10px] mt-0.5 ${stayType === 'short_stay' ? 'text-emerald-200' : 'text-emerald-700 font-medium'}`}>Same Day · Save 50%</span>
+                  </button>
+                </div>
+
+                {stayType === 'short_stay' && (
+                  <div className="mt-3 pt-3 border-t border-[#eef2eb]">
+                    <label className="text-xs text-slate-600 block">
+                      Preferred Day-Use Slot Timings
+                      <select value={shortStaySlot} onChange={e => setShortStaySlot(e.target.value)} className="mt-1">
+                        <option value="10:00-15:00">10:00 AM to 03:00 PM (5 Hours Day Use)</option>
+                        <option value="12:00-17:00">12:00 PM to 05:00 PM (5 Hours Afternoon)</option>
+                        <option value="14:00-19:00">02:00 PM to 07:00 PM (5 Hours Evening)</option>
+                        <option value="16:00-21:00">04:00 PM to 09:00 PM (5 Hours Night Slot)</option>
+                      </select>
+                    </label>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Event Timing Selector */}
+            {isEvent && (
+              <div className="sm:col-span-2 rounded-2xl border border-amber-200 bg-amber-50/70 p-3.5">
+                <p className="text-xs font-bold uppercase tracking-wider text-amber-900">🎉 Single-Day Event Celebration</p>
+                <p className="text-[11px] text-amber-800 mt-0.5">Package rate includes full lawn/hall amenities for the day.</p>
+                <div className="mt-2.5">
+                  <label className="text-xs font-medium text-amber-950 block">
+                    Event Schedule / Timings
+                    <select value={eventSlot} onChange={e => setEventSlot(e.target.value)} className="mt-1 bg-white">
+                      <option value="09:00-22:00">Full Day Event (09:00 AM to 10:00 PM)</option>
+                      <option value="16:00-23:00">Evening Reception & Dinner (04:00 PM to 11:00 PM)</option>
+                      <option value="08:00-15:00">Morning & Lunch Celebration (08:00 AM to 03:00 PM)</option>
+                    </select>
+                  </label>
+                </div>
+              </div>
+            )}
+
+            <label className={isSingleDay ? 'sm:col-span-2' : ''}>
+              {isEvent ? 'Event Date' : isSingleDay ? 'Visit Date' : 'Check in'}
+              <input
+                required
+                type="date"
+                min={new Date().toISOString().slice(0,10)}
+                value={form.checkIn}
+                onChange={e => {
+                  const val = e.target.value
+                  setForm(prev => ({
+                    ...prev,
+                    checkIn: val,
+                    checkOut: isSingleDay ? val : (prev.checkOut && prev.checkOut > val ? prev.checkOut : val)
+                  }))
+                }}
+              />
+            </label>
+
+            {!isSingleDay && (
+              <label>
+                Check out
+                <input
+                  required
+                  type="date"
+                  min={form.checkIn || new Date().toISOString().slice(0,10)}
+                  value={form.checkOut}
+                  onChange={e => setForm({ ...form, checkOut: e.target.value })}
+                />
+              </label>
+            )}
+
+            <label className="sm:col-span-2">
+              Guests
+              <input required type="number" min="1" value={form.guests} onChange={e => setForm({ ...form, guests: e.target.value })} />
+            </label>
+            <label className="sm:col-span-2">Coupon or Advance code (optional)
+              <input 
+                placeholder="MONSOON30 or ADVANCE50" 
+                value={form.couponCode} 
+                onChange={handleCouponChange}
+                className={appliedCoupon ? 'border-green-500 bg-green-50' : appliedAdvance ? 'border-blue-500 bg-blue-50' : ''}
+              />
+              {appliedCoupon && <span className="text-xs text-green-600 mt-1 block">✓ Discount coupon applied successfully</span>}
+              {appliedAdvance && <span className="text-xs text-blue-700 mt-1 block font-medium">🛡️ Advance code applied: {appliedAdvance.percentage ? `${appliedAdvance.percentage}% deposit` : `₹${appliedAdvance.fixedAmount} deposit`}</span>}
+            </label>
+            {appliedAdvance ? (
+              <div className="flex flex-col gap-1 rounded-xl bg-blue-50 border border-blue-200 p-4 text-sm sm:col-span-2 text-blue-950">
+                <div className="flex items-center justify-between text-xs text-blue-800">
+                  <span>Total stay value · {nights} night{nights > 1 ? 's' : ''}</span>
+                  <strong className="text-sm text-slate-700">₹{subtotal.toLocaleString('en-IN')}</strong>
+                </div>
+                <div className="flex items-center justify-between text-xs text-amber-800 mt-1">
+                  <span>Pending balance (due upon arrival):</span>
+                  <strong>₹{advancePending.toLocaleString('en-IN')}</strong>
+                </div>
+                <div className="flex items-center justify-between text-sm font-bold text-blue-900 mt-2 pt-2 border-t border-blue-200">
+                  <span>Due Today (Advance Deposit):</span>
+                  <strong className="text-lg text-blue-950">₹{advanceDeposit.toLocaleString('en-IN')}</strong>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between rounded-xl bg-[#edf1e8] p-4 text-sm sm:col-span-2">
+                <div>
+                  <span>Estimated total · {nights} night{nights > 1 ? 's' : ''}</span>
+                  {discount > 0 && <span className="block text-xs text-green-600 mt-1">Discount applied: ₹{discount.toLocaleString('en-IN')}</span>}
+                </div>
+                <div className="text-right">
+                  {discount > 0 && <p className="line-through text-slate-500 text-sm">₹{subtotal.toLocaleString('en-IN')}</p>}
+                  <strong className="text-lg text-[#173d35]">₹{estimate.toLocaleString('en-IN')}</strong>
+                </div>
+              </div>
+            )}
+            <label className="sm:col-span-2">
+              Aadhaar Number (12 digits)
+              <input
+                required
+                type="text"
+                inputMode="numeric"
+                placeholder="12-digit Aadhaar Number (e.g. 1234 5678 9012)"
+                value={form.aadhaarNumber}
+                maxLength="14"
+                onChange={e => {
+                  const digits = e.target.value.replace(/\D/g, '').slice(0, 12)
+                  const formatted = digits.replace(/(\d{4})(?=\d)/g, '$1 ')
+                  setForm({ ...form, aadhaarNumber: formatted })
+                }}
+              />
+            </label>
             <div className="sm:col-span-2"><BookingTerms checked={form.termsAccepted} onChange={termsAccepted => setForm({ ...form, termsAccepted })} /></div>
             {error && <p className="text-sm text-red-600 sm:col-span-2">{error}</p>}
             <button className="button-primary sm:col-span-2" type="submit" disabled={status === 'booking'}>
