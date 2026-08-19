@@ -72,6 +72,19 @@ TONE & GUIDELINES:
     let reply = ''
     let lastError = null
 
+    // Build chat history ensuring first item is 'user' role
+    const history = conversationHistory
+      .slice(-8)
+      .filter(item => item.text && item.text.trim())
+      .map(item => ({
+        role: item.role === 'user' ? 'user' : 'model',
+        parts: [{ text: item.text }],
+      }))
+
+    while (history.length > 0 && history[0].role !== 'user') {
+      history.shift()
+    }
+
     // Try candidate models
     for (const modelName of CANDIDATE_MODELS) {
       try {
@@ -79,11 +92,6 @@ TONE & GUIDELINES:
           model: modelName,
           systemInstruction: systemPrompt,
         })
-
-        const history = conversationHistory.slice(-6).map(item => ({
-          role: item.role === 'user' ? 'user' : 'model',
-          parts: [{ text: item.text }],
-        }))
 
         const chat = model.startChat({ history })
         const result = await chat.sendMessage(message)

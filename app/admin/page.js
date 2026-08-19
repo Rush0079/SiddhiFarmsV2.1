@@ -1,5 +1,7 @@
 'use client'
 
+export const dynamic = 'force-dynamic'
+
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, Check, Clock3, Edit3, Image as ImageIcon, LayoutDashboard, LogOut, Percent, Plus, QrCode, RotateCcw, Save, ScrollText, ShieldCheck, Trash2, Upload, Users, Loader2, X, FileText, Share2, Printer } from 'lucide-react'
