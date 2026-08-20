@@ -75,16 +75,13 @@ export default function LoginContent() {
             <label>Password<input type="password" required minLength={6} placeholder="Enter your password" value={password} onChange={e => setPassword(e.target.value)} /></label>
             <div className="flex gap-3 rounded-xl bg-[#f0f3ec] p-4 text-xs leading-5 text-[#315d4c]">
               <ShieldCheck className="mt-0.5 shrink-0" size={16} />
-              <span>Only Super Admin, Manager and Staff accounts can open the admin dashboard. Customers land on the main website after login.</span>
+              <span>Only authorized resort administrators, managers, and staff accounts can log in here. New user accounts are managed directly by Super Admins.</span>
             </div>
             {error && <p className="text-sm text-red-600">{error}</p>}
             <button className="button-primary w-full" type="submit" disabled={loading}>
               {loading ? <><Loader2 size={17} className="animate-spin" /> Signing in…</> : <>Continue <ArrowRight size={17} /></>}
             </button>
           </form>
-          <p className="mt-8 text-center text-xs leading-5 text-slate-400">
-            New here? <a href="/signup" className="font-semibold text-[#315d4c] underline">Create a customer account</a>
-          </p>
         </div>
       </div>
     </main>
