@@ -240,6 +240,24 @@ const DETAILS = {
 
 const KIND_LABEL = { stay: 'Stay', experience: 'Experience' }
 
+function formatTime12h(timeStr) {
+  if (!timeStr) return ''
+  const [h, m] = String(timeStr).split(':').map(Number)
+  if (isNaN(h)) return timeStr
+  const suffix = h >= 12 ? 'PM' : 'AM'
+  const h12 = h % 12 || 12
+  return `${h12}:${String(m || 0).padStart(2, '0')} ${suffix}`
+}
+
+function calculateHoursDuration(inStr, outStr) {
+  const [inH, inM] = (inStr || '11:00').split(':').map(Number)
+  const [outH, outM] = (outStr || '15:00').split(':').map(Number)
+  const diffMinutes = (outH * 60 + outM) - (inH * 60 + inM)
+  if (diffMinutes <= 0) return 'Custom'
+  const hours = diffMinutes / 60
+  return Number.isInteger(hours) ? `${hours} Hours` : `${hours.toFixed(1)} Hours`
+}
+
 function BookingModal({ slug, config, pricing, user, onClose }) {
   const isPerPerson = config.priceUnit.includes('person')
   const [form, setForm] = useState({
@@ -255,7 +273,8 @@ function BookingModal({ slug, config, pricing, user, onClose }) {
   })
   const [booking, setBooking] = useState(null)
   const [stayType, setStayType] = useState('overnight')
-  const [shortStaySlot, setShortStaySlot] = useState('10:00-15:00')
+  const [shortStayInTime, setShortStayInTime] = useState('11:00')
+  const [shortStayOutTime, setShortStayOutTime] = useState('15:00')
   const [status, setStatus] = useState('idle')
   const [error, setError] = useState('')
   const [appliedCoupon, setAppliedCoupon] = useState(null)
@@ -383,11 +402,17 @@ function BookingModal({ slug, config, pricing, user, onClose }) {
     event.preventDefault()
     setStatus('booking'); setError('')
     try {
-      const [inTime, outTime] = isShortStay
-        ? shortStaySlot.split('-')
+      const inTime = isShortStay
+        ? (shortStayInTime || '11:00')
         : isPerPerson
-        ? ['09:30', '18:00']
-        : ['11:00', '10:00']
+        ? '09:30'
+        : '11:00'
+
+      const outTime = isShortStay
+        ? (shortStayOutTime || '15:00')
+        : isPerPerson
+        ? '18:00'
+        : '10:00'
 
       const payload = {
         ...form,
@@ -523,22 +548,70 @@ function BookingModal({ slug, config, pricing, user, onClose }) {
                         : 'bg-[#f4f7f2] text-[#173d35] hover:bg-[#e7eee4]'
                     }`}
                   >
-                    <span>☀️ Day Use / Short Stay (4–5 Hrs)</span>
-                    <span className={`text-[10px] mt-0.5 ${stayType === 'short_stay' ? 'text-emerald-200' : 'text-emerald-700 font-medium'}`}>Same Day · Save 50%</span>
+                    <span>☀️ Day Use / Short Stay</span>
+                    <span className={`text-[10px] mt-0.5 ${stayType === 'short_stay' ? 'text-emerald-200' : 'text-emerald-700 font-medium'}`}>Custom Timings · Save 50%</span>
                   </button>
                 </div>
 
                 {stayType === 'short_stay' && (
-                  <div className="mt-3 pt-3 border-t border-[#eef2eb]">
-                    <label className="text-xs text-slate-600 block">
-                      Preferred Day-Use Slot Timings
-                      <select value={shortStaySlot} onChange={e => setShortStaySlot(e.target.value)} className="mt-1">
-                        <option value="10:00-15:00">10:00 AM to 03:00 PM (5 Hours Day Use)</option>
-                        <option value="12:00-17:00">12:00 PM to 05:00 PM (5 Hours Afternoon)</option>
-                        <option value="14:00-19:00">02:00 PM to 07:00 PM (5 Hours Evening)</option>
-                        <option value="16:00-21:00">04:00 PM to 09:00 PM (5 Hours Night Slot)</option>
-                      </select>
-                    </label>
+                  <div className="mt-3 pt-3 border-t border-[#eef2eb] space-y-3">
+                    <div>
+                      <p className="text-[11px] font-bold text-[#315d4c] uppercase tracking-wider mb-1.5">Quick Duration Presets</p>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                        {[
+                          ['2 Hours (11 AM - 1 PM)', '11:00', '13:00'],
+                          ['3 Hours (12 PM - 3 PM)', '12:00', '15:00'],
+                          ['4 Hours (12 PM - 4 PM)', '12:00', '16:00'],
+                          ['5 Hours (10 AM - 3 PM)', '10:00', '15:00'],
+                        ].map(([label, inT, outT]) => (
+                          <button
+                            key={label}
+                            type="button"
+                            onClick={() => {
+                              setShortStayInTime(inT)
+                              setShortStayOutTime(outT)
+                            }}
+                            className={`rounded-lg py-1.5 px-2 text-[11px] font-medium border transition text-center ${
+                              shortStayInTime === inT && shortStayOutTime === outT
+                                ? 'bg-[#173d35] text-white border-[#173d35] shadow-xs font-bold'
+                                : 'bg-white text-slate-700 border-slate-200 hover:bg-[#edf1e8]'
+                            }`}
+                          >
+                            {label.split(' (')[0]}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <p className="text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1.5">Or Choose Custom Start & End Time</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        <label className="text-[11px] text-slate-600 block">
+                          Check-in Time
+                          <input
+                            type="time"
+                            required
+                            value={shortStayInTime}
+                            onChange={e => setShortStayInTime(e.target.value)}
+                            className="mt-1 w-full bg-white text-xs"
+                          />
+                        </label>
+                        <label className="text-[11px] text-slate-600 block">
+                          Check-out Time
+                          <input
+                            type="time"
+                            required
+                            value={shortStayOutTime}
+                            onChange={e => setShortStayOutTime(e.target.value)}
+                            className="mt-1 w-full bg-white text-xs"
+                          />
+                        </label>
+                      </div>
+                      <div className="mt-2 flex items-center justify-between rounded-lg bg-[#edf1e8] px-3 py-1.5 text-xs text-[#173d35]">
+                        <span>✨ Your Selected Hours:</span>
+                        <strong>{formatTime12h(shortStayInTime)} → {formatTime12h(shortStayOutTime)} ({calculateHoursDuration(shortStayInTime, shortStayOutTime)})</strong>
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
