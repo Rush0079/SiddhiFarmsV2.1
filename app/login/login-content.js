@@ -66,7 +66,6 @@ export default function LoginContent() {
             <h1 className="mt-4 font-serif text-6xl leading-none">Welcome<br /><em>back.</em></h1>
             <p className="mt-5 max-w-xs text-sm leading-6 text-white/65">Sign in to manage stays, celebrations and every farm-fresh detail.</p>
           </div>
-          <p className="text-xs text-white/45">Secure login · Supabase Auth</p>
         </div>
         <div className="p-7 sm:p-12">
           <a href="/" className="mb-12 flex items-center gap-2 text-sm text-[#315d4c] md:hidden"><ArrowLeft size={16} /> Public website</a>
