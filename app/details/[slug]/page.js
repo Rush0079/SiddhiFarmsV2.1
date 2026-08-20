@@ -826,9 +826,9 @@ export default function DetailPage({ params }) {
         {modalOpen && <BookingModal slug={slug} config={config} pricing={pricing} user={user} onClose={() => setModalOpen(false)} />}
 
         <footer className="mt-20 border-t border-[#dfe7dc] pt-8 text-center text-xs text-slate-400">
-          <div className="container flex flex-col sm:flex-row items-center justify-between gap-2 pb-6">
+          <div className="container flex flex-col sm:flex-row items-center justify-between gap-2 pb-10 sm:pb-6 sm:pr-48">
             <span>© 2026 Siddhi Farm Resort · Come as you are</span>
-            <span className="text-[11px] text-slate-400">Developed & Maintained by <span className="font-semibold text-[#173d35]">Rushikesh Nigade</span></span>
+            <span className="text-[11px] text-slate-500">Developed & Maintained by <span className="font-semibold text-[#173d35]">Rushikesh Nigade</span></span>
           </div>
         </footer>
       </main>
