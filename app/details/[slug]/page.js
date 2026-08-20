@@ -467,13 +467,14 @@ function BookingModal({ slug, config, pricing, user, onClose }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/60 p-0 backdrop-blur-sm sm:items-center sm:p-6">
-      <div className="max-h-[calc(100dvh-1rem)] w-full max-w-2xl overflow-y-auto overscroll-contain rounded-t-3xl bg-[#fbfaf6] p-6 shadow-2xl sm:max-h-[calc(100dvh-3rem)] sm:rounded-3xl sm:p-9">
-        <div className="mb-7 flex items-start justify-between">
-          <div><p className="eyebrow">Book · {config.title}</p><h2 className="mt-2 font-serif text-3xl text-[#173d35]">Reserve your visit</h2></div>
-          <button onClick={onClose} className="rounded-full bg-[#edf1e8] p-2" aria-label="Close"><X size={18} /></button>
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/60 p-0 backdrop-blur-sm sm:items-center sm:p-6 animate-in fade-in duration-200">
+      <div className="flex max-h-[calc(100dvh-1rem)] w-full max-w-2xl flex-col overflow-hidden rounded-t-3xl bg-[#fbfaf6] shadow-2xl sm:max-h-[calc(100dvh-3rem)] sm:rounded-3xl border border-[#dfe7dc]/60">
+        <div className="flex items-start justify-between border-b border-[#eef2eb] bg-[#fbfaf6] p-6 pb-4 sm:px-9 sm:pt-8 shrink-0">
+          <div><p className="eyebrow">Book · {config.title}</p><h2 className="mt-1 font-serif text-2xl sm:text-3xl text-[#173d35]">Reserve your visit</h2></div>
+          <button onClick={onClose} className="rounded-full bg-[#edf1e8] p-2 hover:bg-[#dfe6dc] transition" aria-label="Close"><X size={18} /></button>
         </div>
 
+        <div className="flex-1 overflow-y-auto p-6 sm:px-9 sm:pb-9">
         {status === 'paid' ? (
           <div className="rounded-2xl bg-[#e5efe4] p-7 text-center text-[#173d35]">
             <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[#315d4c] text-white"><Check /></div>
@@ -714,6 +715,7 @@ function BookingModal({ slug, config, pricing, user, onClose }) {
             </button>
           </form>
         )}
+        </div>
       </div>
     </div>
   )
