@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { ArrowLeft, ArrowRight, LockKeyhole, ShieldCheck, Loader2 } from 'lucide-react'
+import { ArrowLeft, ArrowRight, LockKeyhole, ShieldCheck, Loader2, Clock } from 'lucide-react'
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser'
 import { siteImage } from '@/lib/siteImages'
 
@@ -10,6 +10,7 @@ export default function LoginContent() {
   const router = useRouter()
   const params = useSearchParams()
   const next = params.get('next') || '/admin'
+  const isTimedOut = params.get('reason') === 'timeout'
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -75,6 +76,17 @@ export default function LoginContent() {
             <h2 className="mt-2 font-serif text-4xl text-[#173d35]">Sign in</h2>
             <p className="mt-3 text-sm leading-6 text-slate-500">Customers and resort teams both start from here.</p>
           </div>
+
+          {isTimedOut && (
+            <div className="mb-6 flex items-start gap-3 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-xs text-amber-900 shadow-sm">
+              <Clock className="mt-0.5 shrink-0 text-amber-700" size={16} />
+              <div>
+                <p className="font-bold text-amber-900">Session Timed Out</p>
+                <p className="mt-0.5 text-amber-800 leading-5">Your session expired after 1 minute of inactivity for security. Please sign in again.</p>
+              </div>
+            </div>
+          )}
+
           <form onSubmit={submit} className="space-y-5">
             <label>Email address<input type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" /></label>
             <label>Password<input type="password" required minLength={6} placeholder="Enter your password" value={password} onChange={e => setPassword(e.target.value)} /></label>

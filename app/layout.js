@@ -1,5 +1,6 @@
 import './globals.css'
 import AiConcierge from '@/components/ai-concierge'
+import SessionTimeout from '@/components/session-timeout'
 
 export const metadata = {
   title: 'Siddhi Farm Resort | Come for the green',
@@ -12,6 +13,7 @@ export default function RootLayout({ children }) {
       <body>
         {children}
         <AiConcierge />
+        <SessionTimeout />
       </body>
     </html>
   )
