@@ -43,12 +43,42 @@ function overlaps(aStart, aEnd, bStart, bEnd) {
   return new Date(aStart) < new Date(bEnd) && new Date(aEnd) > new Date(bStart)
 }
 
-async function requireRole(minRoles) {
-  const supabase = await createSupabaseServerClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Unauthorized', status: 401 }
-  const { data: profile } = await supabase.from('profiles').select('role, full_name, email').eq('id', user.id).single()
-  if (!profile || !minRoles.includes(profile.role)) return { error: 'Forbidden', status: 403 }
+async function requireRole(minRoles, req = null) {
+  let user = null
+
+  // 1. Check Authorization Bearer Header (JWT Token)
+  const authHeader = req?.headers?.get ? (req.headers.get('authorization') || '') : ''
+  if (authHeader.startsWith('Bearer ')) {
+    const token = authHeader.replace(/^Bearer\s+/i, '').trim()
+    if (token) {
+      try {
+        const admin = supabaseAdmin()
+        const { data, error } = await admin.auth.getUser(token)
+        if (data?.user && !error) {
+          user = data.user
+        }
+      } catch {}
+    }
+  }
+
+  // 2. Check Cookie-Based JWT Session via Supabase SSR
+  if (!user) {
+    try {
+      const supabase = await createSupabaseServerClient()
+      const { data } = await supabase.auth.getUser()
+      user = data?.user || null
+    } catch {}
+  }
+
+  if (!user) return { error: 'Unauthorized: Invalid or missing JWT session', status: 401 }
+
+  // 3. Query User Role & RBAC claims
+  const admin = supabaseAdmin()
+  const { data: profile } = await admin.from('profiles').select('role, full_name, email').eq('id', user.id).single()
+  if (!profile || !minRoles.includes(profile.role)) {
+    return { error: 'Forbidden: Insufficient role permissions', status: 403 }
+  }
+
   return { user, profile }
 }
 
@@ -229,6 +259,20 @@ export async function GET(request, { params }) {
         paid: booking.paid,
         payment_status: booking.payment_status,
         status: booking.status,
+      })
+    }
+
+    if (path[0] === 'auth' && path[1] === 'me') {
+      const guard = await requireRole(['customer', 'staff', 'manager', 'super_admin'], request)
+      if (guard.error) return NextResponse.json({ authenticated: false, error: guard.error }, { status: guard.status })
+      return NextResponse.json({
+        authenticated: true,
+        user: {
+          id: guard.user.id,
+          email: guard.user.email,
+          role: guard.profile.role,
+          full_name: guard.profile.full_name,
+        },
       })
     }
 
