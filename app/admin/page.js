@@ -10,7 +10,20 @@ import { IMAGE_SECTIONS } from '@/lib/siteImages'
 import { showSuccess, showError, showAlert, showConfirm, showToast } from '@/lib/swal'
 import { getWhatsAppShareUrl } from '@/lib/whatsapp'
 
-const labels = { masterBedroom: 'Master bedroom', villa2BHK: '2 BHK villa', villa4BHK: '4 BHK villa', oneDayTour: 'One day tour', miniWaterPark: 'One day tour + mini water park', weddingEvent: 'Wedding event', engagementEvent: 'Engagement event', birthdayEvent: 'Birthday event', getTogetherEvent: 'Get-together event' }
+const labels = {
+  masterBedroom: 'Master bedroom (Overnight)',
+  villa2BHK: '2 BHK villa (Overnight)',
+  villa4BHK: '4 BHK villa (Overnight)',
+  masterBedroomShortStay: 'Master bedroom (Short Stay / Day-Use)',
+  villa2BHKShortStay: '2 BHK villa (Short Stay / Day-Use)',
+  villa4BHKShortStay: '4 BHK villa (Short Stay / Day-Use)',
+  oneDayTour: 'One day tour',
+  miniWaterPark: 'One day tour + mini water park',
+  weddingEvent: 'Wedding event',
+  engagementEvent: 'Engagement event',
+  birthdayEvent: 'Birthday event',
+  getTogetherEvent: 'Get-together event'
+}
 
 function displayBookingTime(value, fallback) {
   const [hours, minutes] = String(value || fallback).split(':').map(Number)
@@ -358,7 +371,8 @@ export default function AdminPage() {
   const rootAdminId = customers.filter(u => u.role === 'super_admin').reduce((a, b) => (!a || new Date(b.created_at) < new Date(a.created_at) ? b : a), null)?.id
   const sections = [
     ['overview', 'Overview'],
-    ['bookings', 'Bookings'],
+    ['bookings', 'All Bookings'],
+    ['short_stays', '☀️ Short stays'],
     ...(canManagePricing ? [
       ['pricing', 'Pricing & offers'],
       ['advance', 'Advance codes'],
@@ -743,6 +757,206 @@ export default function AdminPage() {
             {!bookings.length && <p className="py-8 text-center text-sm text-slate-400">New booking requests will appear here.</p>}
           </div>
         </section>}
+
+        {tab === 'short_stays' && (
+          <div className="mt-8 space-y-8">
+            {/* Short Stay Room Pricing Manager */}
+            {canManagePricing && (
+              <section className="rounded-2xl border border-[#dfe7dc] bg-white p-6 sm:p-8">
+                <div className="flex flex-wrap items-center justify-between gap-4">
+                  <div>
+                    <p className="eyebrow text-[#315d4c]">Hourly & Day-Use Pricing</p>
+                    <h2 className="mt-2 font-serif text-2xl text-[#173d35]">Short Stay Room Rates</h2>
+                    <p className="mt-1 text-xs text-slate-500 max-w-2xl">
+                      Configure custom rates for guests booking same-day day-use stays (e.g. 2–5 hours). These rates apply automatically when guests select the Day Use / Short Stay duration.
+                    </p>
+                  </div>
+                  <button className="button-primary" onClick={savePricing}>
+                    {saved ? <><Check size={16} /> Saved</> : <><Save size={16} /> Save Short Stay Rates</>}
+                  </button>
+                </div>
+
+                <div className="mt-6 grid gap-4 sm:grid-cols-3">
+                  <div className="rounded-xl border border-[#dfe7dc] bg-[#fbfcf9] p-4">
+                    <label className="text-xs font-semibold text-[#173d35] block">
+                      Master Bedroom (Short Stay)
+                      <div className="relative mt-2">
+                        <span className="absolute left-3 top-3 text-sm text-slate-400">₹</span>
+                        <input
+                          className="pl-7 w-full bg-white"
+                          type="number"
+                          min="0"
+                          placeholder="2500"
+                          value={pricing.masterBedroomShortStay ?? ''}
+                          onChange={e => setPricing({ ...pricing, masterBedroomShortStay: Number(e.target.value) })}
+                        />
+                      </div>
+                    </label>
+                    <p className="mt-2 text-[11px] text-slate-400">Overnight: ₹{(pricing.masterBedroom || 4500).toLocaleString('en-IN')}</p>
+                  </div>
+
+                  <div className="rounded-xl border border-[#dfe7dc] bg-[#fbfcf9] p-4">
+                    <label className="text-xs font-semibold text-[#173d35] block">
+                      2 BHK Villa (Short Stay)
+                      <div className="relative mt-2">
+                        <span className="absolute left-3 top-3 text-sm text-slate-400">₹</span>
+                        <input
+                          className="pl-7 w-full bg-white"
+                          type="number"
+                          min="0"
+                          placeholder="5000"
+                          value={pricing.villa2BHKShortStay ?? ''}
+                          onChange={e => setPricing({ ...pricing, villa2BHKShortStay: Number(e.target.value) })}
+                        />
+                      </div>
+                    </label>
+                    <p className="mt-2 text-[11px] text-slate-400">Overnight: ₹{(pricing.villa2BHK || 9000).toLocaleString('en-IN')}</p>
+                  </div>
+
+                  <div className="rounded-xl border border-[#dfe7dc] bg-[#fbfcf9] p-4">
+                    <label className="text-xs font-semibold text-[#173d35] block">
+                      4 BHK Villa (Short Stay)
+                      <div className="relative mt-2">
+                        <span className="absolute left-3 top-3 text-sm text-slate-400">₹</span>
+                        <input
+                          className="pl-7 w-full bg-white"
+                          type="number"
+                          min="0"
+                          placeholder="8000"
+                          value={pricing.villa4BHKShortStay ?? ''}
+                          onChange={e => setPricing({ ...pricing, villa4BHKShortStay: Number(e.target.value) })}
+                        />
+                      </div>
+                    </label>
+                    <p className="mt-2 text-[11px] text-slate-400">Overnight: ₹{(pricing.villa4BHK || 15000).toLocaleString('en-IN')}</p>
+                  </div>
+                </div>
+              </section>
+            )}
+
+            {/* Short Stay Bookings Table */}
+            <section className="rounded-2xl border border-[#dfe7dc] bg-white p-6 sm:p-8">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div>
+                  <p className="eyebrow text-[#315d4c]">Day-Use Reservations</p>
+                  <h2 className="mt-2 font-serif text-2xl text-[#173d35]">Short Stay Guests</h2>
+                  <p className="mt-1 text-xs text-slate-500">Live feed of all flexible hourly and day-use reservations with exact guest arrival & departure hours.</p>
+                </div>
+                <div className="rounded-xl bg-[#eef4ec] px-4 py-2 text-xs font-semibold text-[#315d4c]">
+                  {bookings.filter(b => b.stay_type === 'short_stay' || (b.check_in === b.check_out && !['One Day Tour', 'Mini Water Park', 'Wedding Ceremony', 'Engagement Ceremony', 'Birthday Party', 'Get Together'].includes(b.service))).length} Short Stay Bookings
+                </div>
+              </div>
+
+              <div className="mt-6 overflow-x-auto">
+                <table className="w-full min-w-[760px] text-left text-sm">
+                  <thead className="border-b border-[#e5ebe1] text-xs uppercase tracking-wider text-slate-400">
+                    <tr>
+                      <th className="pb-3">Guest & Aadhaar</th>
+                      <th className="pb-3">Room / Stay</th>
+                      <th className="pb-3">Date</th>
+                      <th className="pb-3">Slot Timings</th>
+                      <th className="pb-3">Amount</th>
+                      <th className="pb-3">Payment</th>
+                      <th className="pb-3">Actions</th>
+                      {canDelete && <th className="pb-3"><span className="sr-only">Delete</span></th>}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {bookings
+                      .filter(b => b.stay_type === 'short_stay' || (b.check_in === b.check_out && !['One Day Tour', 'Mini Water Park', 'Wedding Ceremony', 'Engagement Ceremony', 'Birthday Party', 'Get Together'].includes(b.service)))
+                      .map(item => (
+                        <tr className="border-b border-[#eef2eb]" key={item.id}>
+                          <td className="py-4">
+                            <strong>{item.name}</strong>
+                            <br />
+                            <span className="text-xs text-slate-400">{item.phone}</span>
+                            {item.aadhaar_number && (
+                              <span className="mt-0.5 block text-[11px] font-mono text-slate-500">ID: {item.aadhaar_number}</span>
+                            )}
+                          </td>
+                          <td className="py-4">
+                            <span className="font-medium text-[#173d35]">{item.service}</span>
+                            <span className="ml-1.5 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">Short Stay</span>
+                          </td>
+                          <td className="py-4 text-xs text-slate-600">{item.check_in}</td>
+                          <td className="py-4">
+                            <span className="block text-xs font-semibold text-[#173d35]">
+                              {displayBookingTime(item.check_in_time, '11:00')} → {displayBookingTime(item.check_out_time, '15:00')}
+                            </span>
+                            <button
+                              onClick={() => setTimeEditor({ id: item.id, name: item.name, checkInTime: item.check_in_time?.slice(0, 5) || '11:00', checkOutTime: item.check_out_time?.slice(0, 5) || '15:00' })}
+                              className="mt-1 flex items-center gap-1 text-[10px] text-[#315d4c] hover:underline font-medium"
+                            >
+                              <Clock3 size={12} /> Adjust Slot
+                            </button>
+                          </td>
+                          <td className="py-4 font-semibold text-xs text-[#173d35]">
+                            ₹{Number(item.total_amount || item.amount || 0).toLocaleString('en-IN')}
+                          </td>
+                          <td className="py-4">
+                            {item.pending_amount > 0 ? (
+                              <div className="flex flex-col items-start gap-1">
+                                <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[11px] font-semibold text-blue-800">
+                                  Adv. ₹{Number(item.paid_amount || (item.paid ? item.amount : 0)).toLocaleString('en-IN')}
+                                </span>
+                                <span className="text-[10px] font-bold text-amber-700">
+                                  ₹{Number(item.pending_amount).toLocaleString('en-IN')} Due
+                                </span>
+                              </div>
+                            ) : item.paid ? (
+                              <span className="rounded-full bg-green-100 px-2.5 py-1 text-xs font-semibold text-green-700">Paid in full ✓</span>
+                            ) : (
+                              <button onClick={() => markPaid(item)} className="rounded-full border border-[#b7c7b8] px-2.5 py-1 text-[10px] font-medium text-[#315d4c] hover:bg-[#e3eee1]">
+                                Mark paid
+                              </button>
+                            )}
+                          </td>
+                          <td className="py-4">
+                            <div className="flex items-center gap-2">
+                              <select className="m-0 w-auto py-1.5 text-xs font-medium bg-white" value={item.status} onChange={e => updateBooking(item.id, e.target.value)}>
+                                <option value="pending">Pending</option>
+                                <option value="confirmed">Confirmed</option>
+                                <option value="cancelled">Cancelled</option>
+                                <option value="completed">Completed</option>
+                              </select>
+                              <a
+                                href={getWhatsAppShareUrl(item)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                title="Send WhatsApp Receipt"
+                                className="flex items-center justify-center rounded-lg bg-[#25D366]/10 p-2 text-[#25D366] hover:bg-[#25D366] hover:text-white"
+                              >
+                                <Share2 size={14} />
+                              </a>
+                              <a
+                                href={`/invoice/${item.id}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                title="View PDF Tax Invoice"
+                                className="flex items-center justify-center rounded-lg bg-[#173d35]/10 p-2 text-[#173d35] hover:bg-[#173d35] hover:text-white"
+                              >
+                                <FileText size={14} />
+                              </a>
+                            </div>
+                          </td>
+                          {canDelete && (
+                            <td className="py-4">
+                              <button onClick={() => deleteBooking(item.id)} title="Delete booking" className="rounded-full p-2 text-red-500 hover:bg-red-100">
+                                <Trash2 size={15} />
+                              </button>
+                            </td>
+                          )}
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+                {!bookings.filter(b => b.stay_type === 'short_stay' || (b.check_in === b.check_out && !['One Day Tour', 'Mini Water Park', 'Wedding Ceremony', 'Engagement Ceremony', 'Birthday Party', 'Get Together'].includes(b.service))).length && (
+                  <p className="py-10 text-center text-sm text-slate-400">No short-stay bookings yet. When customers book day-use slots, they will appear here.</p>
+                )}
+              </div>
+            </section>
+          </div>
+        )}
 
         {timeEditor && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#102f29]/45 p-4" role="dialog" aria-modal="true" aria-labelledby="booking-times-title">

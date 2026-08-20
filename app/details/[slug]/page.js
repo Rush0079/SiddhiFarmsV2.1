@@ -293,7 +293,8 @@ function BookingModal({ slug, config, pricing, user, onClose }) {
 
   let subtotal = 0
   if (isShortStay) {
-    subtotal = Math.round(rate * 0.5)
+    const shortKey = `${config.priceKey}ShortStay`
+    subtotal = pricing[shortKey] ? Number(pricing[shortKey]) : Math.round(rate * 0.5)
   } else if (isPerPerson) {
     subtotal = rate * Math.max(1, Number(form.guests) || 1)
   } else {
@@ -549,7 +550,7 @@ function BookingModal({ slug, config, pricing, user, onClose }) {
                     }`}
                   >
                     <span>☀️ Day Use / Short Stay</span>
-                    <span className={`text-[10px] mt-0.5 ${stayType === 'short_stay' ? 'text-emerald-200' : 'text-emerald-700 font-medium'}`}>Custom Timings · Save 50%</span>
+                    <span className={`text-[10px] mt-0.5 ${stayType === 'short_stay' ? 'text-emerald-200' : 'text-emerald-700 font-medium'}`}>Flexible Hourly / Day-Use Slots</span>
                   </button>
                 </div>
 

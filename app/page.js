@@ -68,7 +68,8 @@ function BookingPanel({ pricing, user, onClose }) {
   
   let subtotal = 0
   if (isRoom && stayType === 'short_stay') {
-    subtotal = Math.round(rate * 0.5)
+    const shortKey = form.service === 'Master Bedroom' ? 'masterBedroomShortStay' : form.service === '2 BHK Villa' ? 'villa2BHKShortStay' : 'villa4BHKShortStay'
+    subtotal = pricing[shortKey] ? Number(pricing[shortKey]) : Math.round(rate * 0.5)
   } else if (isEvent) {
     subtotal = rate
   } else if (isDayTour) {
@@ -352,7 +353,7 @@ function BookingPanel({ pricing, user, onClose }) {
                     }`}
                   >
                     <span>☀️ Day Use / Short Stay</span>
-                    <span className={`text-[10px] mt-0.5 ${stayType === 'short_stay' ? 'text-emerald-200' : 'text-emerald-700 font-medium'}`}>Custom Timings · Save 50%</span>
+                    <span className={`text-[10px] mt-0.5 ${stayType === 'short_stay' ? 'text-emerald-200' : 'text-emerald-700 font-medium'}`}>Flexible Hourly / Day-Use Slots</span>
                   </button>
                 </div>
 

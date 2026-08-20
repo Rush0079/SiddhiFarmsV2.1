@@ -9,7 +9,20 @@ import { normaliseBookingTerms } from '@/lib/booking-terms'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 import { sendAutomatedWhatsAppMessage } from '@/lib/whatsapp'
 
-const defaultPricing = { masterBedroom: 4500, villa2BHK: 9000, villa4BHK: 15000, oneDayTour: 700, miniWaterPark: 950, weddingEvent: 35000, engagementEvent: 18000, birthdayEvent: 12000, getTogetherEvent: 10000 }
+const defaultPricing = {
+  masterBedroom: 4500,
+  villa2BHK: 9000,
+  villa4BHK: 15000,
+  masterBedroomShortStay: 2500,
+  villa2BHKShortStay: 5000,
+  villa4BHKShortStay: 8000,
+  oneDayTour: 700,
+  miniWaterPark: 950,
+  weddingEvent: 35000,
+  engagementEvent: 18000,
+  birthdayEvent: 12000,
+  getTogetherEvent: 10000,
+}
 const pricingKeys = Object.keys(defaultPricing)
 // Core keys are always present; custom rates ride along in values with their labels under _labels.
 function cleanPricing(values = {}) {
@@ -37,6 +50,12 @@ const serviceRateKey = {
   'Mini Water Park': 'miniWaterPark',
   'One Day Tour + Mini Water Park': 'miniWaterPark',
   'One Day Tour + Mini Adventure Park': 'oneDayTour',
+}
+
+const serviceShortStayRateKey = {
+  'Master Bedroom': 'masterBedroomShortStay',
+  '2 BHK Villa': 'villa2BHKShortStay',
+  '4 BHK Villa': 'villa4BHKShortStay',
 }
 
 function overlaps(aStart, aEnd, bStart, bEnd) {
@@ -475,8 +494,9 @@ export async function POST(request, { params }) {
 
       let subtotal = 0
       if (isShortStay) {
-        // 4-5 hours Day-Use short stay is priced at 50% of the standard overnight rate
-        subtotal = Math.round((rates[rateKey] || 0) * 0.5)
+        // Admin-managed short stay rate (or fallback to 50% of overnight rate)
+        const shortKey = serviceShortStayRateKey[body.service]
+        subtotal = (shortKey && rates[shortKey]) ? Number(rates[shortKey]) : Math.round((rates[rateKey] || 0) * 0.5)
       } else if (isEventService) {
         // Flat 1-day event ceremony package
         subtotal = (rates[rateKey] || 0)
