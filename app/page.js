@@ -13,6 +13,9 @@ const experiences = [
   ['farm-stays', 'Farm stays', 'Wake up to birdsong in our spacious master bedrooms and private villas.', 'masterBedroom', 'per night'],
   ['one-day-tour', 'One Day Tour', 'A relaxed countryside day with lunch and open-lawn play. No overnight required.', 'oneDayTour', 'per person'],
   ['mini-water-park', 'Mini Water Park', 'Splash-worthy fun with slides, kid zones and shaded seating for parents.', 'miniWaterPark', 'per person'],
+  ['get-together', 'Get-Togethers', 'Spacious open lawns and shaded banquet areas perfect for family reunions and alumni gatherings.', 'getTogetherEvent', 'per event'],
+  ['birthday-party', 'Birthday & Naming Ceremony', 'Joyful celebration setups with music, dining, and scenic poolside backdrops.', 'birthdayEvent', 'per event'],
+  ['wedding-ceremony', 'Wedding & Engagement', 'Breathtaking countryside open-air ceremonies, mandap lawns and memorable celebrations.', 'weddingEvent', 'per event'],
 ]
 const stayCards = [
   ['master-bedroom', '01', 'Master bedrooms', 'A calm, comfortable base for slow mornings.', 'masterBedroom', 'stayMasterBedroom'],
