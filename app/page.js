@@ -743,7 +743,12 @@ export default function App() {
               <a className="mt-3 block text-sm text-white/70" href="https://www.instagram.com/siddhi_farm_resort"><Instagram className="mr-2 inline" size={14} />Instagram</a>
             </div>
           </div>
-          <div className="container mt-14 border-t border-white/10 pt-5 text-xs text-white/35">© 2026 Siddhi Farm Resort · Come as you are</div>
+          <div className="container mt-14 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-white/10 pt-5 text-xs text-white/40">
+            <span>© 2026 Siddhi Farm Resort · Come as you are</span>
+            <span className="text-[11px] text-white/35 font-medium tracking-wide">
+              Developed & Maintained by <span className="text-white/60 font-semibold">Rushikesh Nigade</span>
+            </span>
+          </div>
         </footer>
 
         {bookingOpen && <BookingPanel pricing={pricing} user={user} onClose={() => setBookingOpen(false)} />}

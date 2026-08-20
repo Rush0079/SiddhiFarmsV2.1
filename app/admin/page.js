@@ -1127,11 +1127,17 @@ export default function AdminPage() {
                     })}
                   </tbody>
                 </table>
-                {!customers.length && <p className="py-8 text-center text-sm text-slate-400">No users registered yet.</p>}
               </div>
             </section>
           </div>
         )}
+
+        <footer className="mt-14 border-t border-[#dfe7dc] pt-6 pb-8 text-center text-xs text-slate-400">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-2">
+            <span>Siddhi Farm Resort Operations Desk</span>
+            <span className="text-[11px]">Developed & Maintained by <span className="font-semibold text-[#173d35]">Rushikesh Nigade</span></span>
+          </div>
+        </footer>
       </div>
     </main>
   )
