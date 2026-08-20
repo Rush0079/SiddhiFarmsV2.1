@@ -45,7 +45,9 @@ export default function LoginContent() {
       router.refresh()
     } catch (err) {
       if (err?.message === 'Failed to fetch' || (err?.message || '').includes('fetch')) {
-        setError('Connection error (Failed to fetch). Please verify that NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY are set in Vercel Project Settings → Environment Variables.')
+        setError('Network connection issue. Please try again.')
+      } else if ((err?.message || '').toLowerCase().includes('invalid login credentials')) {
+        setError('Invalid email or password. Please check your credentials.')
       } else {
         setError(err.message || 'Unable to sign in. Please try again.')
       }
