@@ -703,6 +703,11 @@ export async function POST(request, { params }) {
 
     // ---- Payments: guest claims a manual UPI payment ----
     if (path[0] === 'payments' && path[1] === 'upi-claim') {
+      const clientIp = getClientIp(request)
+      const limit = checkRateLimit(clientIp, 'upi_claim', 10, 5 * 60 * 1000)
+      if (!limit.allowed) {
+        return NextResponse.json({ error: `Too many claim attempts. Please try again in ${limit.resetInSeconds}s.` }, { status: 429 })
+      }
       const bookingId = String(body.bookingId || '')
       if (!bookingId) return NextResponse.json({ error: 'bookingId required' }, { status: 400 })
       const { data: booking } = await admin.from('bookings').select('id, paid, notes').eq('id', bookingId).single()

@@ -87,3 +87,6 @@ node_modules/@next/swc-linux-arm64-musl/next-swc.linux-arm64-musl.node
 credentials.json
 *.key
 .credentials
+SECURITY_AUDIT_LOCAL*
+*_local.md
+*_local.adoc
