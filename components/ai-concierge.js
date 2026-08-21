@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import { usePathname } from 'next/navigation'
 import { MessageSquare, X, Send, Sparkles, Bot, User, Phone, MapPin, Calendar, Loader2, ArrowRight } from 'lucide-react'
 
 const SUGGESTED_QUESTIONS = [
@@ -13,6 +14,7 @@ const SUGGESTED_QUESTIONS = [
 ]
 
 export default function AiConcierge() {
+  const pathname = usePathname()
   const [isOpen, setIsOpen] = useState(false)
   const [input, setInput] = useState('')
   const [messages, setMessages] = useState([
@@ -89,10 +91,12 @@ export default function AiConcierge() {
     return <div dangerouslySetInnerHTML={{ __html: formatted }} />
   }
 
+  if (pathname === '/login') return null
+
   return (
     <>
-      {/* Floating Toggle Button (lifted on mobile to avoid overlapping sticky booking bar) */}
-      <div className="fixed bottom-20 sm:bottom-6 right-4 sm:right-6 z-40">
+      {/* Floating Toggle Button */}
+      <div className="fixed bottom-4 sm:bottom-6 right-4 sm:right-6 z-40">
         {!isOpen && (
           <button
             onClick={() => setIsOpen(true)}

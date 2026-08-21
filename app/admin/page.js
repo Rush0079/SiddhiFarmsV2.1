@@ -1133,8 +1133,8 @@ export default function AdminPage() {
           </div>
         )}
 
-        <footer className="mt-14 border-t border-[#dfe7dc] pt-6 pb-28 sm:pb-8 text-center text-xs text-slate-500">
-          <div className="flex flex-col items-center justify-center gap-2">
+        <footer className="mt-14 border-t border-[#dfe7dc] pt-6 pb-6 text-center text-xs text-slate-500">
+          <div className="flex flex-col items-center justify-center gap-1.5">
             <span>Siddhi Farm Resort Operations Desk</span>
             <span className="text-[11.5px] text-slate-500 font-medium">Developed &amp; Maintained by <span className="font-semibold text-[#173d35]">Rushikesh Nigade</span></span>
           </div>

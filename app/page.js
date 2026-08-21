@@ -774,7 +774,7 @@ export default function App() {
           </div>
         </section>
 
-        <footer id="contact" className="bg-[#102f29] py-16 text-white">
+        <footer id="contact" className="bg-[#102f29] pt-14 pb-4 text-white">
           <div className="container grid gap-10 sm:grid-cols-2 md:grid-cols-4">
             <div className="md:col-span-2">
               <div className="flex items-center gap-4">
@@ -796,7 +796,7 @@ export default function App() {
               <a className="mt-3 block text-sm text-white/70" href="https://www.instagram.com/siddhi_farm_resort"><Instagram className="mr-2 inline" size={14} />Instagram</a>
             </div>
           </div>
-          <div className="container mt-14 flex flex-col items-center justify-center gap-2 border-t border-white/10 pt-6 pb-28 sm:pb-8 text-center text-xs text-white/50">
+          <div className="container mt-12 flex flex-col items-center justify-center gap-2 border-t border-white/10 pt-5 pb-4 text-center text-xs text-white/50">
             <span>© 2026 Siddhi Farm Resort · Come as you are</span>
             <span className="text-[11.5px] text-white/45 font-medium tracking-wide">
               Developed &amp; Maintained by <span className="text-emerald-300 font-semibold">Rushikesh Nigade</span>
