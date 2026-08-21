@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { ArrowLeft, ArrowRight, LockKeyhole, ShieldCheck, Loader2, Clock } from 'lucide-react'
+import { ArrowLeft, ArrowRight, LockKeyhole, ShieldCheck, Loader2, Clock, AlertTriangle } from 'lucide-react'
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser'
 import { siteImage } from '@/lib/siteImages'
+import { executeRecaptcha } from '@/lib/recaptcha-client'
 
 export default function LoginContent() {
   const router = useRouter()
@@ -16,19 +17,38 @@ export default function LoginContent() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [images, setImages] = useState({})
+  const [failedAttempts, setFailedAttempts] = useState(0)
+  const [lockoutSeconds, setLockoutSeconds] = useState(0)
 
   useEffect(() => {
     fetch('/api/images').then(r => r.json()).then(setImages).catch(() => {})
   }, [])
 
+  // Lockout countdown timer
+  useEffect(() => {
+    if (lockoutSeconds <= 0) return
+    const timer = setInterval(() => {
+      setLockoutSeconds(prev => (prev > 1 ? prev - 1 : 0))
+    }, 1000)
+    return () => clearInterval(timer)
+  }, [lockoutSeconds])
+
   async function submit(event) {
     event.preventDefault()
+    if (lockoutSeconds > 0) return
+
     setError('')
     setLoading(true)
     try {
+      // Execute reCAPTCHA v3 bot analysis
+      await executeRecaptcha('login_submit').catch(() => null)
+
       const supabase = createSupabaseBrowserClient()
       const { data, error: err } = await supabase.auth.signInWithPassword({ email: email.trim(), password })
       if (err) throw err
+
+      // Reset attempts on successful authentication
+      setFailedAttempts(0)
 
       // Fetch role to decide destination
       const { data: profile } = await supabase
@@ -45,10 +65,21 @@ export default function LoginContent() {
       }
       router.refresh()
     } catch (err) {
+      const nextFailed = failedAttempts + 1
+      setFailedAttempts(nextFailed)
+
+      // Brute-force throttling: 5 failed attempts locks for 30s
+      if (nextFailed >= 5) {
+        setLockoutSeconds(30)
+        setFailedAttempts(0)
+        setError('Too many failed login attempts. Account temporarily locked for 30 seconds to prevent unauthorized access.')
+        return
+      }
+
       if (err?.message === 'Failed to fetch' || (err?.message || '').includes('fetch')) {
         setError('Network connection issue. Please try again.')
       } else if ((err?.message || '').toLowerCase().includes('invalid login credentials')) {
-        setError('Invalid email or password. Please check your credentials.')
+        setError(`Invalid email or password. (${5 - nextFailed} attempt${5 - nextFailed === 1 ? '' : 's'} remaining before temporary cooldown)`)
       } else {
         setError(err.message || 'Unable to sign in. Please try again.')
       }
@@ -95,8 +126,14 @@ export default function LoginContent() {
               <span>Only authorized resort administrators, managers, and staff accounts can log in here. New user accounts are managed directly by Super Admins.</span>
             </div>
             {error && <p className="text-sm text-red-600">{error}</p>}
-            <button className="button-primary w-full" type="submit" disabled={loading}>
-              {loading ? <><Loader2 size={17} className="animate-spin" /> Signing in…</> : <>Continue <ArrowRight size={17} /></>}
+            <button className="button-primary w-full" type="submit" disabled={loading || lockoutSeconds > 0}>
+              {loading ? (
+                <><Loader2 size={17} className="animate-spin" /> Signing in…</>
+              ) : lockoutSeconds > 0 ? (
+                <><Clock size={16} /> Temporarily locked ({lockoutSeconds}s)</>
+              ) : (
+                <>Continue <ArrowRight size={17} /></>
+              )}
             </button>
           </form>
         </div>
