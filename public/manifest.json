@@ -1,0 +1,22 @@
+{
+  "name": "JARVIS / FRIDAY - Siddhi Farms Mobile HUD",
+  "short_name": "JARVIS HUD",
+  "description": "Iron Man style developer voice assistant & remote codebase control for Siddhi Farms",
+  "start_url": "/jarvis",
+  "display": "standalone",
+  "background_color": "#050b14",
+  "theme_color": "#00d2ff",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/logo.png",
+      "sizes": "192x192 512x512",
+      "type": "image/png"
+    }
+  ]
+}

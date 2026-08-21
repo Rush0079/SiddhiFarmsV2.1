@@ -14,6 +14,7 @@ export const metadata = {
     shortcut: '/favicon.ico',
     apple: '/siddhi-logo.jpg',
   },
+  manifest: '/manifest.json',
 }
 
 export default function RootLayout({ children }) {
