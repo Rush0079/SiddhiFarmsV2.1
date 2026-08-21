@@ -91,12 +91,14 @@ export default function AiConcierge() {
     return <div dangerouslySetInnerHTML={{ __html: formatted }} />
   }
 
+  const isDetailsPage = pathname?.startsWith('/details')
+
   if (pathname === '/login') return null
 
   return (
     <>
-      {/* Floating Toggle Button */}
-      <div className="fixed bottom-4 sm:bottom-6 right-4 sm:right-6 z-40">
+      {/* Floating Toggle Button (Lifted on details page mobile to avoid sticky booking bar) */}
+      <div className={`fixed ${isDetailsPage ? 'bottom-20 sm:bottom-6' : 'bottom-5 sm:bottom-6'} right-4 sm:right-6 z-40`}>
         {!isOpen && (
           <button
             onClick={() => setIsOpen(true)}
