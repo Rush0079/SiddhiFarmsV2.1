@@ -470,18 +470,7 @@ WORKFLOW RULES:
 2. Keep spoken responses engaging, crisp, and informative for live voice discussion mode.
 3. When you make a code change via patch_file, give a quick confirmation of what was fixed and mention that Vercel auto-deployment is underway.`
 
-    const candidateModels = ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-flash-latest']
-    let model = null
-    for (const m of candidateModels) {
-      try {
-        model = genAI.getGenerativeModel({
-          model: m,
-          systemInstruction: systemInstruction,
-          tools: [{ functionDeclarations: jarvisToolDeclarations }],
-        })
-        break
-      } catch {}
-    }
+    const candidateModels = ['gemini-3.6-flash', 'gemini-3.7-flash', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-flash-latest']
 
     let formattedHistory = (conversationHistory || [])
       .filter(msg => msg && msg.content && typeof msg.content === 'string')
@@ -495,13 +484,37 @@ WORKFLOW RULES:
       formattedHistory.shift()
     }
 
-    const chat = model.startChat({
-      history: formattedHistory,
-    })
+    let chat = null
+    let result = null
+    let lastError = null
 
-    const actionsTaken = []
-    let result = await chat.sendMessage(message)
+    for (const modelName of candidateModels) {
+      try {
+        const model = genAI.getGenerativeModel({
+          model: modelName,
+          systemInstruction: systemInstruction,
+          tools: [{ functionDeclarations: jarvisToolDeclarations }],
+        })
+
+        const testChat = model.startChat({
+          history: formattedHistory,
+        })
+
+        result = await testChat.sendMessage(message)
+        chat = testChat
+        break
+      } catch (err) {
+        lastError = err
+        console.warn(`[JARVIS Model Fallback] Model ${modelName} error:`, err.message)
+      }
+    }
+
+    if (!result || !chat) {
+      throw lastError || new Error('Failed to connect with any candidate Gemini model.')
+    }
+
     let functionCalls = result.response.functionCalls()
+    const actionsTaken = []
 
     // Agentic Tool Loop
     let loopCount = 0
