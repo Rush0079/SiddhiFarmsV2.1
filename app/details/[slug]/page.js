@@ -763,7 +763,10 @@ export default function DetailPage({ params }) {
           <img src={siteImage(images, `detail:${slug}:hero`) || config.hero} alt={config.title} className="h-full w-full object-cover" />
           <div className="absolute inset-0 bg-gradient-to-b from-[#0c2a22]/80 via-[#0c2a22]/30 to-[#0c2a22]/70" />
           <div className="container relative z-10 flex h-full flex-col justify-between py-8 text-white">
-            <Link href="/" className="flex w-max items-center gap-2 rounded-full bg-white/15 px-4 py-2 text-xs backdrop-blur hover:bg-white/25"><ArrowLeft size={14} /> Back to home</Link>
+            <Link href="/" className="flex w-max items-center gap-2 rounded-full bg-white/15 px-4 py-2 text-xs backdrop-blur hover:bg-white/25">
+              <img src="/icon.png" alt="Siddhi Logo" className="h-5 w-5 rounded-full object-cover" />
+              <ArrowLeft size={14} /> Back to home
+            </Link>
             <div>
               <p className="eyebrow text-[#e3c77c]">{KIND_LABEL[config.kind]}</p>
               <h1 className="mt-3 font-serif text-5xl leading-[.98] sm:text-6xl">{config.title}</h1>

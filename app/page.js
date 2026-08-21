@@ -586,7 +586,10 @@ export default function App() {
       <main>
         <nav className="absolute left-0 right-0 top-0 z-20">
           <div className="container flex h-24 items-center justify-between">
-            <a href="#top" className="font-serif text-2xl font-bold tracking-tight text-white">Siddhi<span className="text-[#d5b36a]">.</span></a>
+            <a href="#top" className="flex items-center gap-2.5 font-serif text-2xl font-bold tracking-tight text-white group">
+              <img src="/icon.png" alt="Siddhi Farm Resort Logo" className="h-9 w-9 rounded-full object-cover border border-[#d5b36a]/40 shadow-sm transition group-hover:scale-105" />
+              <span>Siddhi<span className="text-[#d5b36a]">.</span></span>
+            </a>
             <div className="hidden items-center gap-8 text-sm text-white/85 md:flex">
               <a href="#stay">Stay</a><a href="#experiences">Experiences</a><a href="#story">Our story</a><a href="#contact">Contact</a>
               {isStaff && <a href="/admin">Admin</a>}
@@ -734,7 +737,10 @@ export default function App() {
         <footer id="contact" className="bg-[#102f29] py-14 text-white">
           <div className="container grid gap-10 sm:grid-cols-2 md:grid-cols-4">
             <div className="md:col-span-2">
-              <p className="font-serif text-3xl">Siddhi<span className="text-[#d5b36a]">.</span></p>
+              <div className="flex items-center gap-3">
+                <img src="/icon.png" alt="Siddhi Farm Resort Logo" className="h-11 w-11 rounded-full object-cover border border-[#d5b36a]/40 shadow-sm" />
+                <p className="font-serif text-3xl">Siddhi<span className="text-[#d5b36a]">.</span></p>
+              </div>
               <p className="mt-4 max-w-sm text-sm leading-6 text-white/55">A farm resort for slow days, full hearts and stories worth taking home.</p>
             </div>
             <div>

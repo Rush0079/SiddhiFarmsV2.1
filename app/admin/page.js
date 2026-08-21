@@ -387,7 +387,7 @@ export default function AdminPage() {
       <header className="border-b border-[#dbe4d7] bg-[#173d35] text-white">
         <div className="container flex min-h-20 items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="rounded-lg bg-[#d5b36a] p-2 text-[#173d35]"><LayoutDashboard size={18} /></div>
+            <img src="/icon.png" alt="Siddhi Logo" className="h-10 w-10 rounded-full object-cover border border-[#d5b36a]/40 shadow-sm" />
             <div>
               <p className="font-serif text-xl">Siddhi Admin</p>
               <p className="text-[10px] uppercase tracking-[.18em] text-white/55">Operations centre · {profile.role.replace('_', ' ')}</p>
@@ -406,7 +406,7 @@ export default function AdminPage() {
             <h1 className="section-title mt-2 text-4xl">Good day, {profile.full_name || 'team'}.</h1>
             <p className="mt-3 text-sm text-slate-500">Manage live resort pricing, bookings, coupons and team access.</p>
           </div>
-          <div className="flex items-center gap-2 rounded-full bg-[#e3eee1] px-4 py-2 text-xs text-[#315d4c]"><ShieldCheck size={15} /> Secured with Supabase Auth</div>
+          <div className="flex items-center gap-2 rounded-full bg-[#e3eee1] px-4 py-2 text-xs text-[#315d4c]"><ShieldCheck size={15} /> Verified Staff Portal</div>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
