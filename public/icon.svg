@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300" fill="none">
+  <!-- Sun Rays (7 radiating rays in golden amber) -->
+  <g stroke="#d99f36" stroke-width="5.5" stroke-linecap="round">
+    <line x1="60" y1="95" x2="88" y2="100" />
+    <line x1="82" y1="58" x2="105" y2="72" />
+    <line x1="116" y1="30" x2="128" y2="52" />
+    <line x1="150" y1="20" x2="150" y2="46" />
+    <line x1="184" y1="30" x2="172" y2="52" />
+    <line x1="218" y1="58" x2="195" y2="72" />
+    <line x1="240" y1="95" x2="212" y2="100" />
+  </g>
+
+  <!-- Top Golden Bud Dot -->
+  <circle cx="150" cy="118" r="4.5" fill="#d99f36" />
+
+  <!-- Organic Green Leaf / Seed -->
+  <path d="M150 122 C180 152 186 195 150 220 C114 195 120 152 150 122 Z" fill="#244d3d" />
+
+  <!-- Center Gold Vein & Stem -->
+  <path d="M150 125 Q157 170 150 220 C146 230 140 234 120 234" stroke="#d99f36" stroke-width="4.5" stroke-linecap="round" fill="none" />
+</svg>

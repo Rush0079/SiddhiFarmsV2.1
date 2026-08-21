@@ -97,7 +97,7 @@ export default function AiConcierge() {
           <button
             onClick={() => setIsOpen(true)}
             aria-label="Open AI Concierge Chat"
-            className="group flex items-center gap-2.5 rounded-full bg-[#173d35] px-5 py-3.5 text-sm font-semibold text-white shadow-2xl transition-all duration-300 hover:scale-105 hover:bg-[#205147] hover:shadow-[#173d35]/30 focus:outline-none"
+            className="group flex items-center gap-2.5 rounded-full bg-[#173d35] px-5 py-3.5 text-sm font-semibold text-white shadow-2xl transition-all duration-300 hover:scale-105 hover:bg-[#205147] hover:shadow-[#173d35]/30 focus:outline-none animate-float-slow shimmer-button border border-[#d5b36a]/30"
           >
             <span className="relative flex h-3 w-3">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>

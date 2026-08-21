@@ -64,6 +64,78 @@
 .booking-terms-scrollbar::-webkit-scrollbar { width: 6px; }
 .booking-terms-scrollbar::-webkit-scrollbar-track { margin-block: .2rem; border-radius: 999px; background: transparent; }
 .booking-terms-scrollbar::-webkit-scrollbar-thumb { border-radius: 999px; background: #709079; }
-.booking-terms-scrollbar::-webkit-scrollbar-thumb:hover { background: #315d4c; }
 @media (max-width: 640px) { .adventure-shape { right: -45%; width: 85%; opacity: .55; } }
+
+/* Luxury Motion Graphics & Micro-Animations */
+@keyframes floatSlow {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-7px); }
+}
+
+@keyframes pulseGlow {
+  0%, 100% { opacity: 0.85; filter: drop-shadow(0 0 8px rgba(217, 159, 54, 0.4)); }
+  50% { opacity: 1; filter: drop-shadow(0 0 18px rgba(217, 159, 54, 0.75)); }
+}
+
+@keyframes shimmerSweep {
+  0% { transform: translateX(-150%) skewX(-20deg); }
+  100% { transform: translateX(250%) skewX(-20deg); }
+}
+
+.animate-float-slow {
+  animation: floatSlow 5s ease-in-out infinite;
+}
+
+.animate-pulse-glow {
+  animation: pulseGlow 3.5s ease-in-out infinite;
+}
+
+.luxury-card {
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.35s ease, border-color 0.35s ease;
+}
+
+.luxury-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 16px 32px -8px rgba(23, 61, 53, 0.12), 0 4px 12px rgba(213, 179, 106, 0.08);
+}
+
+.luxury-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.15), transparent);
+  transform: translateX(-150%) skewX(-20deg);
+  pointer-events: none;
+  z-index: 5;
+}
+
+.luxury-card:hover::before {
+  animation: shimmerSweep 0.85s ease-out forwards;
+}
+
+.shimmer-button {
+  position: relative;
+  overflow: hidden;
+}
+
+.shimmer-button::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+  transform: translateX(-150%) skewX(-25deg);
+  transition: none;
+}
+
+.shimmer-button:hover::after {
+  animation: shimmerSweep 0.75s ease-in-out;
+}
 

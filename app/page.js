@@ -587,9 +587,8 @@ export default function App() {
       <main>
         <nav className="absolute left-0 right-0 top-0 z-20">
           <div className="container flex h-24 items-center justify-between">
-            <a href="#top" className="flex items-center gap-3 font-serif text-2xl font-bold tracking-tight text-white group">
-              <SiddhiLogo className="h-9 w-9 transition group-hover:scale-105" />
-              <span>Siddhi<span className="text-[#d5b36a]">.</span></span>
+            <a href="#top" className="group block transition hover:opacity-90">
+              <SiddhiLogo variant="nav" />
             </a>
             <div className="hidden items-center gap-8 text-sm text-white/85 md:flex">
               <a href="#stay">Stay</a><a href="#experiences">Experiences</a><a href="#story">Our story</a><a href="#contact">Contact</a>
@@ -604,7 +603,7 @@ export default function App() {
               ) : (
                 <a href="/login" className="rounded-full border border-white/25 px-3 py-1.5 text-xs text-white/80 hover:bg-white/10">Sign in</a>
               )}
-              <button className="button-light" onClick={() => setBookingOpen(true)}>Plan your visit <ArrowUpRight size={16} /></button>
+              <button className="button-light shimmer-button" onClick={() => setBookingOpen(true)}>Plan your visit <ArrowUpRight size={16} /></button>
             </div>
             <button className="rounded-full border border-white/30 p-2 text-white md:hidden" onClick={() => setMenuOpen(!menuOpen)}>{menuOpen ? <X size={20} /> : <Menu size={20} />}</button>
           </div>
@@ -625,12 +624,12 @@ export default function App() {
         <section id="top" className="hero flex min-h-[720px] items-end" style={{ backgroundImage: `linear-gradient(90deg, rgba(12,42,34,.92) 0%, rgba(18,57,46,.62) 48%, rgba(16,47,39,.2) 100%), url(${img('homeHero')})` }}>
           <div className="container relative z-10 pb-20 pt-36">
             <div className="max-w-3xl">
-              <p className="eyebrow text-[#e3c77c]">Farm stays · Agro tourism · Celebrations</p>
+              <p className="eyebrow text-[#e3c77c] animate-float-slow">Farm stays · Agro tourism · Celebrations</p>
               <h1 className="mt-5 font-serif text-6xl leading-[.95] tracking-tight text-white sm:text-8xl">Come for the <em className="font-normal text-[#e3c77c]">green.</em><br />Stay for the feeling.</h1>
               <p className="mt-7 max-w-lg text-base leading-7 text-white/75">A quiet corner of the countryside where good food, open skies and unhurried time come together.</p>
               <div className="mt-9 flex flex-wrap gap-3">
-                <button className="button-gold" onClick={() => setBookingOpen(true)}>Plan your visit <ArrowUpRight size={17} /></button>
-                <a className="button-ghost" href="#story">Discover Siddhi <ArrowUpRight size={17} /></a>
+                <button className="button-gold shimmer-button shadow-lg shadow-[#d5b36a]/15" onClick={() => setBookingOpen(true)}>Plan your visit <ArrowUpRight size={17} /></button>
+                <a className="button-ghost shimmer-button" href="#story">Discover Siddhi <ArrowUpRight size={17} /></a>
               </div>
             </div>
           </div>
@@ -671,13 +670,13 @@ export default function App() {
               {experiences.map(([slug, title, desc, priceKey, unit], i) => {
                 const rate = pricing[priceKey] || 0
                 return (
-                  <a href={`/details/${slug}`} key={slug} className="group block bg-[#214b40] p-8 transition hover:bg-[#2b594b] sm:p-10">
-                    <span className="text-sm text-[#d5b36a]">0{i + 1}</span>
-                    <h3 className="mt-20 font-serif text-3xl">{title}</h3>
+                  <a href={`/details/${slug}`} key={slug} className="luxury-card group block bg-[#214b40] p-8 transition-all duration-300 hover:bg-[#28574a] sm:p-10">
+                    <span className="text-sm font-bold text-[#d5b36a]">0{i + 1}</span>
+                    <h3 className="mt-20 font-serif text-3xl transition-transform duration-300 group-hover:translate-x-1">{title}</h3>
                     <p className="mt-4 min-h-14 text-sm leading-6 text-white/65">{desc}</p>
                     <div className="mt-8 flex items-center justify-between border-t border-white/15 pt-5 text-sm">
-                      <span>₹{rate.toLocaleString('en-IN')} <span className="text-white/50">/ {unit.replace('per ', '')}</span></span>
-                      <ArrowUpRight className="transition group-hover:translate-x-1 group-hover:-translate-y-1" size={18} />
+                      <span className="font-medium text-[#e3c77c]">₹{rate.toLocaleString('en-IN')} <span className="text-white/50 text-xs">/ {unit.replace('per ', '')}</span></span>
+                      <ArrowUpRight className="transition group-hover:translate-x-1 group-hover:-translate-y-1 text-[#d5b36a]" size={18} />
                     </div>
                   </a>
                 )
@@ -689,16 +688,18 @@ export default function App() {
         <section id="stay" className="container py-24 sm:py-32">
           <div className="flex flex-wrap items-end justify-between gap-6">
             <div><p className="eyebrow">Stay awhile</p><h2 className="section-title">Your room in<br /><em>the countryside.</em></h2></div>
-            <button className="button-outline" onClick={() => setBookingOpen(true)}>View availability <ArrowUpRight size={16} /></button>
+            <button className="button-outline shimmer-button" onClick={() => setBookingOpen(true)}>View availability <ArrowUpRight size={16} /></button>
           </div>
-          <div className="mt-14 grid gap-5 md:grid-cols-3">
+          <div className="mt-14 grid gap-6 md:grid-cols-3">
             {stayCards.map(([slug, no, title, desc, priceKey, imageKey]) => (
-              <a href={`/details/${slug}`} className="stay-card group block transition hover:-translate-y-1 hover:shadow-xl" key={slug}>
-                <div className="stay-image" style={{ backgroundImage: `linear-gradient(0deg, rgba(18,57,46,.28), transparent), url(${img(imageKey)})` }}><span>{no}</span></div>
+              <a href={`/details/${slug}`} className="stay-card luxury-card group block transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl" key={slug}>
+                <div className="stay-image overflow-hidden" style={{ backgroundImage: `linear-gradient(0deg, rgba(18,57,46,.28), transparent), url(${img(imageKey)})` }}>
+                  <span className="shadow-md transition-transform duration-300 group-hover:scale-110">{no}</span>
+                </div>
                 <div className="p-6">
-                  <div className="flex justify-between"><h3 className="font-serif text-2xl text-[#173d35]">{title}</h3><span className="text-sm text-slate-500">₹{(pricing[priceKey] || 0).toLocaleString('en-IN')}+</span></div>
+                  <div className="flex justify-between items-center"><h3 className="font-serif text-2xl text-[#173d35] group-hover:text-[#315d4c] transition-colors">{title}</h3><span className="text-sm font-semibold text-[#315d4c]">₹{(pricing[priceKey] || 0).toLocaleString('en-IN')}+</span></div>
                   <p className="mt-3 text-sm leading-6 text-slate-500">{desc}</p>
-                  <div className="mt-4 flex items-center gap-1 text-xs font-semibold uppercase tracking-widest text-[#315d4c] transition group-hover:gap-2">View details <ArrowUpRight size={13} /></div>
+                  <div className="mt-4 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-[#315d4c] transition-all group-hover:gap-2.5">View details <ArrowUpRight size={13} /></div>
                 </div>
               </a>
             ))}
@@ -725,22 +726,25 @@ export default function App() {
           <div className="container">
             <div className="flex flex-wrap items-end justify-between gap-5">
               <div><p className="eyebrow">A glimpse of Siddhi</p><h2 className="section-title">The place is<br /><em>the experience.</em></h2></div>
-              <a href="https://customer-assets-wrfwihn1.emergentagent.net/job_siddhi-farm-dev/artifacts/wgys6sb0_Siddhi%20Farm.pdf" target="_blank" rel="noreferrer" className="button-outline">View full photo story <ArrowUpRight size={16} /></a>
+              <a href="https://customer-assets-wrfwihn1.emergentagent.net/job_siddhi-farm-dev/artifacts/wgys6sb0_Siddhi%20Farm.pdf" target="_blank" rel="noreferrer" className="button-outline shimmer-button">View full photo story <ArrowUpRight size={16} /></a>
             </div>
             <div className="gallery-grid mt-14">
               {[['gallery1', 'Farmhouse'], ['gallery2', 'Villa bedroom'], ['gallery3', 'Swimming pool'], ['gallery4', 'Restaurant'], ['gallery5', 'Party lawn'], ['gallery6', 'Kids adventure']].map(([imageKey, label]) => (
-                <figure key={imageKey} className="gallery-tile"><img src={img(imageKey)} alt={`${label} at Siddhi Farm Resort`} loading="lazy" /><figcaption>{label}</figcaption></figure>
+                <figure key={imageKey} className="gallery-tile luxury-card"><img src={img(imageKey)} alt={`${label} at Siddhi Farm Resort`} loading="lazy" /><figcaption>{label}</figcaption></figure>
               ))}
             </div>
           </div>
         </section>
 
-        <footer id="contact" className="bg-[#102f29] py-14 text-white">
+        <footer id="contact" className="bg-[#102f29] py-16 text-white">
           <div className="container grid gap-10 sm:grid-cols-2 md:grid-cols-4">
             <div className="md:col-span-2">
-              <div className="flex items-center gap-3">
-                <SiddhiLogo className="h-11 w-11" />
-                <p className="font-serif text-3xl">Siddhi<span className="text-[#d5b36a]">.</span></p>
+              <div className="flex items-center gap-4">
+                <SiddhiLogo variant="icon" className="h-14 w-14" />
+                <div className="flex flex-col">
+                  <p className="font-serif text-3xl font-bold tracking-[0.12em] text-white">SIDDHI FARMS</p>
+                  <p className="text-[10px] font-semibold tracking-[0.24em] text-[#d5b36a]">FARM &amp; RESORT · PUNE</p>
+                </div>
               </div>
               <p className="mt-4 max-w-sm text-sm leading-6 text-white/55">A farm resort for slow days, full hearts and stories worth taking home.</p>
             </div>
