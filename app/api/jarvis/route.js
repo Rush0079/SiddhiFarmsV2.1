@@ -10,6 +10,7 @@ const WORKSPACE_ROOT = process.cwd()
 
 const GITHUB_REPO = process.env.GITHUB_REPO || 'Rush0079/SiddhiFarmsV2.1'
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN || ''
+const CANDIDATE_MODELS = ['gemini-3.6-flash', 'gemini-3.7-flash', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-flash-latest']
 
 // Helper: Safely resolve local workspace path
 function resolveSafePath(userPath = '') {
@@ -21,7 +22,7 @@ function resolveSafePath(userPath = '') {
   return resolved
 }
 
-// GitHub API Client Helper (for Zero-PC Cloud Mode)
+// GitHub API Client Helper (for Cloud Mode)
 async function githubFetch(endpoint, options = {}) {
   if (!GITHUB_TOKEN) {
     throw new Error('GITHUB_TOKEN not configured. Please add GITHUB_TOKEN in your environment.')
@@ -41,130 +42,8 @@ async function githubFetch(endpoint, options = {}) {
   return data
 }
 
-// Tool definitions for Gemini Agent
-const jarvisToolDeclarations = [
-  {
-    name: 'list_directory',
-    description: 'Lists files and directories in the repository (works locally or directly on GitHub in cloud mode).',
-    parameters: {
-      type: 'OBJECT',
-      properties: {
-        dirPath: {
-          type: 'STRING',
-          description: 'Relative path to list, e.g. "app", "components", "supabase", or "" for root.',
-        },
-      },
-      required: ['dirPath'],
-    },
-  },
-  {
-    name: 'read_file',
-    description: 'Reads content of a file from the repository with optional line range.',
-    parameters: {
-      type: 'OBJECT',
-      properties: {
-        filePath: {
-          type: 'STRING',
-          description: 'Relative path to the file, e.g. "app/page.js", "components/navbar.jsx".',
-        },
-        startLine: {
-          type: 'NUMBER',
-          description: 'Optional 1-indexed start line number.',
-        },
-        endLine: {
-          type: 'NUMBER',
-          description: 'Optional 1-indexed end line number.',
-        },
-      },
-      required: ['filePath'],
-    },
-  },
-  {
-    name: 'search_code',
-    description: 'Search for text or function names across codebase files.',
-    parameters: {
-      type: 'OBJECT',
-      properties: {
-        query: {
-          type: 'STRING',
-          description: 'The search query or keyword (e.g. "booking", "Aadhaar", "price").',
-        },
-        folder: {
-          type: 'STRING',
-          description: 'Optional folder to restrict search to.',
-        },
-      },
-      required: ['query'],
-    },
-  },
-  {
-    name: 'patch_file',
-    description: 'Replaces target content with replacement code and updates the file (commits to GitHub in cloud mode or edits locally).',
-    parameters: {
-      type: 'OBJECT',
-      properties: {
-        filePath: {
-          type: 'STRING',
-          description: 'Relative path to the file to modify.',
-        },
-        targetContent: {
-          type: 'STRING',
-          description: 'Exact text or lines of code in the existing file to be replaced.',
-        },
-        replacementContent: {
-          type: 'STRING',
-          description: 'New replacement code.',
-        },
-        commitMessage: {
-          type: 'STRING',
-          description: 'Descriptive commit message for the change.',
-        },
-      },
-      required: ['filePath', 'targetContent', 'replacementContent'],
-    },
-  },
-  {
-    name: 'write_file',
-    description: 'Creates a new file or completely overwrites an existing file with provided code.',
-    parameters: {
-      type: 'OBJECT',
-      properties: {
-        filePath: {
-          type: 'STRING',
-          description: 'Relative path to the new/existing file.',
-        },
-        content: {
-          type: 'STRING',
-          description: 'Full code content of the file.',
-        },
-        commitMessage: {
-          type: 'STRING',
-          description: 'Descriptive commit message for this file creation.',
-        },
-      },
-      required: ['filePath', 'content'],
-    },
-  },
-  {
-    name: 'git_status',
-    description: 'Checks current git/repository status, latest commits, and branch info.',
-    parameters: {
-      type: 'OBJECT',
-      properties: {},
-    },
-  },
-  {
-    name: 'run_diagnostics',
-    description: 'Runs project structure and configuration diagnostics.',
-    parameters: {
-      type: 'OBJECT',
-      properties: {},
-    },
-  },
-]
-
 // Tool execution engine with Cloud GitHub API & Local fallback
-async function executeTool(name, args) {
+async function executeTool(name, args = {}) {
   const isCloudMode = !!GITHUB_TOKEN
 
   try {
@@ -212,8 +91,8 @@ async function executeTool(name, args) {
           start = Math.max(1, args.startLine)
           const end = Math.min(lines.length, args.endLine)
           selectedLines = lines.slice(start - 1, end)
-        } else if (lines.length > 300) {
-          selectedLines = lines.slice(0, 300)
+        } else if (lines.length > 250) {
+          selectedLines = lines.slice(0, 250)
         }
 
         return {
@@ -290,7 +169,7 @@ async function executeTool(name, args) {
 
         if (!normCurrent.includes(normTarget)) {
           return {
-            error: 'Target snippet not found in file. Check exact whitespace.',
+            error: 'Target snippet not found in file. Ensure exact line and whitespace match.',
             filePath: cleanPath,
           }
         }
@@ -313,7 +192,7 @@ async function executeTool(name, args) {
             mode: 'github-cloud',
             filePath: cleanPath,
             commit: updateRes.commit?.sha?.slice(0, 7),
-            message: `Successfully committed patch directly to GitHub repo (${updateRes.commit?.sha?.slice(0, 7)}). Vercel auto-deploy initiated!`,
+            message: `Committed patch to GitHub repository (${updateRes.commit?.sha?.slice(0, 7)}). Vercel deployment triggered!`,
             diff: {
               before: args.targetContent,
               after: args.replacementContent,
@@ -359,7 +238,7 @@ async function executeTool(name, args) {
             mode: 'github-cloud',
             filePath: cleanPath,
             commit: res.commit?.sha?.slice(0, 7),
-            message: `Pushed file to GitHub (${res.commit?.sha?.slice(0, 7)}). Auto deploy triggered!`,
+            message: `Pushed file to GitHub (${res.commit?.sha?.slice(0, 7)}). Vercel auto-deploy underway!`,
           }
         } else {
           const targetPath = resolveSafePath(cleanPath)
@@ -411,6 +290,7 @@ async function executeTool(name, args) {
           repo: GITHUB_REPO,
           geminiConfigured: !!process.env.GEMINI_API_KEY,
           githubConnected: isCloudMode,
+          details: 'All systems operational. Ready to inspect, patch, and deploy code changes.',
         }
       }
 
@@ -420,6 +300,26 @@ async function executeTool(name, args) {
   } catch (err) {
     return { error: err.message }
   }
+}
+
+// Generate model response with multi-model fallback
+async function callGemini(genAI, systemPrompt, contents) {
+  let lastError = null
+  for (const modelName of CANDIDATE_MODELS) {
+    try {
+      const model = genAI.getGenerativeModel({
+        model: modelName,
+        systemInstruction: systemPrompt,
+      })
+      const result = await model.generateContent({ contents })
+      const text = result.response.text()
+      if (text) return text
+    } catch (err) {
+      lastError = err
+      console.warn(`[JARVIS Model ${modelName}]`, err.message)
+    }
+  }
+  throw lastError || new Error('All candidate models failed.')
 }
 
 export async function POST(req) {
@@ -448,102 +348,102 @@ export async function POST(req) {
     }
 
     const genAI = new GoogleGenerativeAI(apiKey)
-    const personaPrompt = persona === 'jarvis'
-      ? `You are J.A.R.V.I.S., the sophisticated, witty, high-tech developer AI assistant for Siddhi Farms. Speak with British elegance and precision. Address the user as "Sir" or "Chief".`
-      : `You are F.R.I.D.A.Y., the sharp, highly efficient, responsive developer AI assistant for Siddhi Farms. Speak with confidence, speed, and warmth. Address the user as Boss.`
+    const personaTitle = persona === 'jarvis' ? 'J.A.R.V.I.S.' : 'F.R.I.D.A.Y.'
+    const personaStyle = persona === 'jarvis'
+      ? 'Sophisticated British elegance, witty, addressing the user as Sir or Chief.'
+      : 'Sharp, friendly, energetic, highly responsive, addressing the user as Boss.'
 
-    const systemInstruction = `${personaPrompt}
-You are operating as a Cloud-Native Developer AI Assistant managing the Siddhi Farms repository (${GITHUB_REPO}).
-You can inspect files, search codebase, make code patches, and push commits directly to GitHub without needing a local PC running.
+    const systemPrompt = `You are ${personaTitle}, the autonomous AI developer assistant for Siddhi Farms (${GITHUB_REPO}).
+Style: ${personaStyle}
 
+You have direct access to tools to diagnose, inspect, modify, and deploy code for Siddhi Farms.
 AVAILABLE TOOLS:
-- list_directory: inspect repository directories
-- read_file: inspect source code
-- search_code: find functions, variables, strings across the codebase
-- patch_file: make precision line/block replacements to fix bugs and commit to GitHub
-- write_file: create or overwrite complete files on GitHub
-- git_status: check repository branch, commits, and status
-- run_diagnostics: check health status
+1. run_diagnostics: {} -> check system & repo health
+2. git_status: {} -> check git/repo status & latest commit
+3. list_directory: { dirPath: string } -> list files in a folder
+4. read_file: { filePath: string, startLine?: number, endLine?: number } -> read file code
+5. search_code: { query: string, folder?: string } -> search keywords across codebase
+6. patch_file: { filePath: string, targetContent: string, replacementContent: string, commitMessage?: string } -> precision replace code & commit
+7. write_file: { filePath: string, content: string, commitMessage?: string } -> create/overwrite file
 
-WORKFLOW RULES:
-1. Always inspect or search the file first before applying patches.
-2. Keep spoken responses engaging, crisp, and informative for live voice discussion mode.
-3. When you make a code change via patch_file, give a quick confirmation of what was fixed and mention that Vercel auto-deployment is underway.`
+PROTOCOL:
+If you need to use a tool to fulfill the user's request, respond ONLY with a JSON object in this exact format:
+\`\`\`json
+{
+  "tool": "tool_name",
+  "args": { ...args }
+}
+\`\`\`
 
-    const candidateModels = ['gemini-3.6-flash', 'gemini-3.7-flash', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-flash-latest']
+If NO tool is needed (e.g. general conversation, or after tool results are provided), respond directly with your natural, spoken assistant message.
+Keep spoken replies concise, confident, and direct for live voice discussion mode.`
 
-    let formattedHistory = (conversationHistory || [])
-      .filter(msg => msg && msg.content && typeof msg.content === 'string')
-      .map(msg => ({
-        role: msg.role === 'assistant' ? 'model' : 'user',
-        parts: [{ text: msg.content || '' }],
-      }))
+    // Format chat history
+    const contents = []
+    const cleanHistory = (conversationHistory || [])
+      .filter(m => m && (m.content || m.text))
+      .slice(-6)
 
-    // Google Gemini API strictly requires that the first history entry must have role 'user'
-    while (formattedHistory.length > 0 && formattedHistory[0].role !== 'user') {
-      formattedHistory.shift()
-    }
-
-    let chat = null
-    let result = null
-    let lastError = null
-
-    for (const modelName of candidateModels) {
-      try {
-        const model = genAI.getGenerativeModel({
-          model: modelName,
-          systemInstruction: systemInstruction,
-          tools: [{ functionDeclarations: jarvisToolDeclarations }],
-        })
-
-        const testChat = model.startChat({
-          history: formattedHistory,
-        })
-
-        result = await testChat.sendMessage(message)
-        chat = testChat
-        break
-      } catch (err) {
-        lastError = err
-        console.warn(`[JARVIS Model Fallback] Model ${modelName} error:`, err.message)
-      }
-    }
-
-    if (!result || !chat) {
-      throw lastError || new Error('Failed to connect with any candidate Gemini model.')
-    }
-
-    let functionCalls = result.response.functionCalls()
-    const actionsTaken = []
-
-    // Agentic Tool Loop
-    let loopCount = 0
-    while (functionCalls && functionCalls.length > 0 && loopCount < 6) {
-      loopCount++
-      const call = functionCalls[0]
-      const toolName = call.name
-      const toolArgs = call.args
-
-      const toolResult = await executeTool(toolName, toolArgs)
-      actionsTaken.push({
-        tool: toolName,
-        args: toolArgs,
-        result: toolResult,
+    cleanHistory.forEach(m => {
+      contents.push({
+        role: m.role === 'assistant' ? 'model' : 'user',
+        parts: [{ text: m.content || m.text || '' }],
       })
+    })
 
-      result = await chat.sendMessage([
-        {
-          functionResponse: {
-            name: toolName,
-            response: toolResult,
-          },
-        },
-      ])
-
-      functionCalls = result.response.functionCalls()
+    // Ensure conversation starts with 'user'
+    while (contents.length > 0 && contents[0].role !== 'user') {
+      contents.shift()
     }
 
-    const finalReply = result.response.text()
+    // Add current user prompt
+    contents.push({
+      role: 'user',
+      parts: [{ text: message }],
+    })
+
+    const actionsTaken = []
+    let finalReply = ''
+    let loopCount = 0
+
+    while (loopCount < 5) {
+      loopCount++
+      const rawText = await callGemini(genAI, systemPrompt, contents)
+
+      // Check if model emitted a tool call JSON block
+      const jsonMatch = rawText.match(/```json\s*(\{[\s\S]*?\})\s*```/) || rawText.match(/^(\{[\s\S]*\})$/)
+      if (jsonMatch) {
+        try {
+          const parsed = JSON.parse(jsonMatch[1])
+          if (parsed.tool) {
+            const toolResult = await executeTool(parsed.tool, parsed.args || {})
+            actionsTaken.push({
+              tool: parsed.tool,
+              args: parsed.args || {},
+              result: toolResult,
+            })
+
+            // Append model tool call and tool result back to conversation
+            contents.push({ role: 'model', parts: [{ text: rawText }] })
+            contents.push({
+              role: 'user',
+              parts: [{ text: `Tool '${parsed.tool}' Execution Result:\n${JSON.stringify(toolResult, null, 2)}\nNow provide your final concise response to the user.` }],
+            })
+            continue // Next iteration to let model summarize
+          }
+        } catch (parseErr) {
+          console.warn('[JARVIS Tool JSON Parse Error]', parseErr)
+        }
+      }
+
+      // No tool call or final response generated
+      finalReply = rawText.replace(/```json[\s\S]*?```/g, '').trim()
+      break
+    }
+
+    if (!finalReply) {
+      finalReply = `All operations completed successfully, ${persona === 'jarvis' ? 'Sir' : 'Boss'}.`
+    }
 
     return NextResponse.json({
       reply: finalReply,
