@@ -596,30 +596,32 @@ export default function App() {
             >
               <SiddhiLogo variant="nav" />
             </motion.a>
-            <div className="hidden items-center gap-8 text-sm font-medium text-white/85 md:flex">
+            <div className="hidden items-center gap-2 text-sm font-medium text-white/85 md:flex">
               {[
                 ['#stay', 'Stay'],
                 ['#experiences', 'Experiences'],
                 ['#story', 'Our story'],
                 ['#contact', 'Contact'],
               ].map(([href, label]) => (
-                <a
+                <motion.a
                   key={href}
                   href={href}
-                  className="relative py-1 text-white/85 transition-colors duration-200 hover:text-white group"
+                  whileHover={{ y: -1, backgroundColor: 'rgba(255, 255, 255, 0.12)' }}
+                  whileTap={{ scale: 0.95 }}
+                  className="rounded-full px-4 py-1.5 text-white/85 transition-colors duration-200 hover:text-white"
                 >
                   {label}
-                  <span className="absolute bottom-0 left-0 h-[2px] w-0 bg-[#f6bd50] transition-all duration-300 ease-out group-hover:w-full shadow-[0_0_8px_rgba(246,189,80,0.6)]" />
-                </a>
+                </motion.a>
               ))}
               {isStaff && (
-                <a
+                <motion.a
                   href="/admin"
-                  className="relative py-1 text-[#f6bd50] font-semibold transition-colors duration-200 hover:text-white group"
+                  whileHover={{ y: -1, backgroundColor: 'rgba(246, 189, 80, 0.15)' }}
+                  whileTap={{ scale: 0.95 }}
+                  className="rounded-full px-4 py-1.5 text-[#f6bd50] font-semibold transition-colors duration-200 hover:text-white"
                 >
                   Admin
-                  <span className="absolute bottom-0 left-0 h-[2px] w-0 bg-[#f6bd50] transition-all duration-300 ease-out group-hover:w-full" />
-                </a>
+                </motion.a>
               )}
             </div>
             <div className="hidden items-center gap-3 md:flex">
