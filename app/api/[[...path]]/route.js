@@ -8,6 +8,7 @@ import { sendPaidBookingEmails } from '@/lib/booking-email'
 import { normaliseBookingTerms } from '@/lib/booking-terms'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 import { sendAutomatedWhatsAppMessage } from '@/lib/whatsapp'
+import { verifyRecaptcha } from '@/lib/recaptcha'
 
 const defaultPricing = {
   masterBedroom: 4500,
@@ -435,6 +436,13 @@ export async function POST(request, { params }) {
       const limit = checkRateLimit(clientIp, 'create_booking', 10, 5 * 60 * 1000)
       if (!limit.allowed) {
         return NextResponse.json({ error: `Too many booking requests. Please try again in ${limit.resetInSeconds}s.` }, { status: 429 })
+      }
+
+      // Google reCAPTCHA v3 verification
+      const recaptchaToken = body.recaptchaToken || body.recaptcha_token
+      const recaptchaResult = await verifyRecaptcha(recaptchaToken, 'booking_submit')
+      if (!recaptchaResult.success) {
+        return NextResponse.json({ error: recaptchaResult.error || 'Security verification failed. Please try again.' }, { status: 403 })
       }
 
       if (!body.name || !body.email || !body.phone || !body.checkIn || !body.checkOut || !body.service)

@@ -8,6 +8,7 @@ import { siteImage } from '@/lib/siteImages'
 import UpiPayment from '@/components/upi-payment'
 import BookingTerms from '@/components/booking-terms'
 import { getWhatsAppShareUrl } from '@/lib/whatsapp'
+import { executeRecaptcha } from '@/lib/recaptcha-client'
 
 const experiences = [
   ['farm-stays', 'Farm stays', 'Wake up to birdsong in our spacious master bedrooms and private villas.', 'masterBedroom', 'per night'],
@@ -196,8 +197,11 @@ function BookingPanel({ pricing, user, onClose }) {
         ? '18:00'
         : '10:00'
 
+      const recaptchaToken = await executeRecaptcha('booking_submit')
+
       const payload = {
         ...form,
+        recaptchaToken,
         checkOut: isSingleDay ? form.checkIn : form.checkOut,
         checkInTime: inTime,
         checkOutTime: outTime,
