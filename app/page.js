@@ -700,7 +700,7 @@ export default function App() {
           <div className="container">
             <div className="flex flex-wrap items-end justify-between gap-6">
               <div><p className="eyebrow text-[#d5b36a]">Choose your pace</p><h2 className="section-title text-white">There is always<br /><em>more to experience.</em></h2></div>
-              <Sparkles className="hidden text-[#d5b36a] md:block animate-spin-round cursor-pointer hover:opacity-80 transition-opacity" size={44} strokeWidth={1.2} style={{ filter: 'drop-shadow(0 0 10px rgba(213, 179, 106, 0.45))' }} />
+              <Sparkles className="block text-[#d5b36a] animate-spin-round cursor-pointer hover:opacity-80 transition-opacity h-8 w-8 sm:h-11 sm:w-11" strokeWidth={1.2} style={{ filter: 'drop-shadow(0 0 10px rgba(213, 179, 106, 0.45))' }} />
             </div>
             <div className="mt-14 grid gap-px overflow-hidden rounded-2xl bg-white/15 md:grid-cols-3">
               {experiences.map(([slug, title, desc, priceKey, unit], i) => {
