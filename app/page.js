@@ -588,38 +588,113 @@ export default function App() {
       <main>
         <nav className="absolute left-0 right-0 top-0 z-20">
           <div className="container flex h-24 items-center justify-between">
-            <a href="#top" className="group block transition hover:opacity-90">
+            <motion.a
+              href="#top"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="group block transition"
+            >
               <SiddhiLogo variant="nav" />
-            </a>
-            <div className="hidden items-center gap-8 text-sm text-white/85 md:flex">
-              <a href="#stay">Stay</a><a href="#experiences">Experiences</a><a href="#story">Our story</a><a href="#contact">Contact</a>
-              {isStaff && <a href="/admin">Admin</a>}
+            </motion.a>
+            <div className="hidden items-center gap-8 text-sm font-medium text-white/85 md:flex">
+              {[
+                ['#stay', 'Stay'],
+                ['#experiences', 'Experiences'],
+                ['#story', 'Our story'],
+                ['#contact', 'Contact'],
+              ].map(([href, label]) => (
+                <a
+                  key={href}
+                  href={href}
+                  className="relative py-1 text-white/85 transition-colors duration-200 hover:text-white group"
+                >
+                  {label}
+                  <span className="absolute bottom-0 left-0 h-[2px] w-0 bg-[#f6bd50] transition-all duration-300 ease-out group-hover:w-full shadow-[0_0_8px_rgba(246,189,80,0.6)]" />
+                </a>
+              ))}
+              {isStaff && (
+                <a
+                  href="/admin"
+                  className="relative py-1 text-[#f6bd50] font-semibold transition-colors duration-200 hover:text-white group"
+                >
+                  Admin
+                  <span className="absolute bottom-0 left-0 h-[2px] w-0 bg-[#f6bd50] transition-all duration-300 ease-out group-hover:w-full" />
+                </a>
+              )}
             </div>
             <div className="hidden items-center gap-3 md:flex">
               {user ? (
                 <>
                   <span className="flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-xs text-white"><User size={13} /> {profile?.full_name || user.email}</span>
-                  <button onClick={signOut} className="rounded-full border border-white/25 px-3 py-1.5 text-xs text-white/80 hover:bg-white/10"><LogOut size={13} className="mr-1 inline" /> Sign out</button>
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={signOut}
+                    className="rounded-full border border-white/25 px-3 py-1.5 text-xs text-white/80 hover:bg-white/10"
+                  >
+                    <LogOut size={13} className="mr-1 inline" /> Sign out
+                  </motion.button>
                 </>
               ) : (
-                <a href="/login" className="rounded-full border border-white/25 px-3 py-1.5 text-xs text-white/80 hover:bg-white/10">Sign in</a>
+                <motion.a
+                  whileHover={{ scale: 1.05, y: -1 }}
+                  whileTap={{ scale: 0.95 }}
+                  href="/login"
+                  className="rounded-full border border-white/25 px-4 py-1.5 text-xs text-white/85 hover:bg-white/10 hover:border-white/40 transition-all shadow-xs"
+                >
+                  Sign in
+                </motion.a>
               )}
-              <button className="button-light shimmer-button" onClick={() => setBookingOpen(true)}>Plan your visit <ArrowUpRight size={16} /></button>
+              <motion.button
+                whileHover={{ scale: 1.04, y: -1 }}
+                whileTap={{ scale: 0.96 }}
+                className="button-light shimmer-button shadow-lg text-xs sm:text-sm font-bold"
+                onClick={() => setBookingOpen(true)}
+              >
+                Plan your visit <ArrowUpRight size={16} />
+              </motion.button>
             </div>
-            <button className="rounded-full border border-white/30 p-2 text-white md:hidden" onClick={() => setMenuOpen(!menuOpen)}>{menuOpen ? <X size={20} /> : <Menu size={20} />}</button>
+            <motion.button
+              whileTap={{ scale: 0.92 }}
+              className="rounded-full border border-white/30 p-2 text-white md:hidden"
+              onClick={() => setMenuOpen(!menuOpen)}
+              aria-label="Toggle mobile menu"
+            >
+              {menuOpen ? <X size={20} /> : <Menu size={20} />}
+            </motion.button>
           </div>
-          {menuOpen && (
-            <div className="mx-4 rounded-2xl bg-[#173d35] p-5 text-white md:hidden">
-              <div className="grid gap-4 text-sm">
-                <a href="#stay">Stay</a>
-                <a href="#experiences">Experiences</a>
-                <a href="#story">Our story</a>
-                {isStaff ? <a href="/admin">Admin dashboard</a> : null}
-                {user ? <button onClick={signOut} className="text-left">Sign out</button> : <a href="/login">Sign in / Sign up</a>}
-                <button onClick={() => setBookingOpen(true)} className="text-left">Plan your visit ↗</button>
-              </div>
-            </div>
-          )}
+          <AnimatePresence>
+            {menuOpen && (
+              <motion.div
+                initial={{ opacity: 0, y: -12, scale: 0.96 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -12, scale: 0.96 }}
+                transition={{ duration: 0.22, ease: 'easeOut' }}
+                className="mx-4 rounded-3xl bg-[#123830]/95 backdrop-blur-xl border border-white/15 p-6 text-white shadow-2xl md:hidden"
+              >
+                <div className="grid gap-4 text-base font-medium">
+                  <a href="#stay" onClick={() => setMenuOpen(false)} className="hover:text-[#f6bd50] transition">Stay</a>
+                  <a href="#experiences" onClick={() => setMenuOpen(false)} className="hover:text-[#f6bd50] transition">Experiences</a>
+                  <a href="#story" onClick={() => setMenuOpen(false)} className="hover:text-[#f6bd50] transition">Our story</a>
+                  <a href="#contact" onClick={() => setMenuOpen(false)} className="hover:text-[#f6bd50] transition">Contact</a>
+                  {isStaff ? <a href="/admin" className="text-[#f6bd50]">Admin dashboard</a> : null}
+                  <div className="border-t border-white/15 pt-4 mt-2 flex flex-col gap-3">
+                    {user ? (
+                      <button onClick={signOut} className="text-left text-sm text-white/70">Sign out</button>
+                    ) : (
+                      <a href="/login" className="text-left text-sm text-[#f6bd50]">Sign in / Staff login</a>
+                    )}
+                    <button
+                      onClick={() => { setMenuOpen(false); setBookingOpen(true) }}
+                      className="button-light shimmer-button w-full justify-center text-sm font-bold mt-1"
+                    >
+                      Plan your visit ↗
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </nav>
 
         {/* Area 1: Hero Section with Ambient Motion Graphics */}
@@ -881,27 +956,80 @@ export default function App() {
 
         <footer id="contact" className="bg-[#102f29] pt-14 pb-4 text-white">
           <div className="container grid gap-10 sm:grid-cols-2 md:grid-cols-4">
-            <div className="md:col-span-2">
-              <div className="flex items-center gap-4">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: '-40px' }}
+              transition={{ duration: 0.5 }}
+              className="md:col-span-2"
+            >
+              <motion.div
+                whileHover={{ scale: 1.03 }}
+                transition={{ type: 'spring', stiffness: 300 }}
+                className="flex items-center gap-4 cursor-pointer inline-flex"
+              >
                 <SiddhiLogo variant="icon" className="h-14 w-14" />
                 <div className="flex flex-col">
                   <p className="font-serif text-3xl font-bold tracking-[0.12em] text-white">SIDDHI FARMS</p>
                   <p className="text-[10px] font-semibold tracking-[0.24em] text-[#d5b36a]">FARM &amp; RESORT · PUNE</p>
                 </div>
-              </div>
+              </motion.div>
               <p className="mt-4 max-w-sm text-sm leading-6 text-white/55">A farm resort for slow days, full hearts and stories worth taking home.</p>
-            </div>
-            <div>
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: '-40px' }}
+              transition={{ duration: 0.5, delay: 0.1 }}
+            >
               <p className="eyebrow text-[#d5b36a]">Find us</p>
-              <a className="mt-4 block text-sm text-white/70" href="https://maps.app.goo.gl/iBiKXi45sJ99vrV69">Maharashtra, India <MapPin className="ml-1 inline" size={14} /></a>
-            </div>
-            <div>
+              <motion.a
+                whileHover={{ x: 6, color: '#f6bd50' }}
+                transition={{ duration: 0.2 }}
+                className="mt-4 inline-flex items-center gap-1.5 text-sm text-white/70 hover:text-[#f6bd50] transition-colors"
+                href="https://maps.app.goo.gl/iBiKXi45sJ99vrV69"
+                target="_blank"
+                rel="noreferrer"
+              >
+                Maharashtra, India <MapPin size={14} className="text-[#d5b36a]" />
+              </motion.a>
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: '-40px' }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+            >
               <p className="eyebrow text-[#d5b36a]">Connect</p>
-              <a className="mt-4 block text-sm text-white/70" href="tel:7083682768"><Phone className="mr-2 inline" size={14} />7083682768</a>
-              <a className="mt-3 block text-sm text-white/70" href="https://www.instagram.com/siddhi_farm_resort"><Instagram className="mr-2 inline" size={14} />Instagram</a>
-            </div>
+              <div className="mt-4 flex flex-col gap-3">
+                <motion.a
+                  whileHover={{ x: 6, color: '#f6bd50' }}
+                  transition={{ duration: 0.2 }}
+                  className="inline-flex items-center gap-2 text-sm text-white/70 hover:text-[#f6bd50] transition-colors"
+                  href="tel:7083682768"
+                >
+                  <Phone size={14} className="text-[#d5b36a]" /> 7083682768
+                </motion.a>
+                <motion.a
+                  whileHover={{ x: 6, color: '#f6bd50' }}
+                  transition={{ duration: 0.2 }}
+                  className="inline-flex items-center gap-2 text-sm text-white/70 hover:text-[#f6bd50] transition-colors"
+                  href="https://www.instagram.com/siddhi_farm_resort"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <Instagram size={14} className="text-[#d5b36a]" /> Instagram
+                </motion.a>
+              </div>
+            </motion.div>
           </div>
-          <div className="container mt-12 flex flex-col items-center justify-center gap-2 border-t border-white/10 pt-6 pb-6 text-center text-xs text-white/50">
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: '-30px' }}
+            transition={{ duration: 0.5, delay: 0.25 }}
+            className="container mt-12 flex flex-col items-center justify-center gap-2 border-t border-white/10 pt-6 pb-6 text-center text-xs text-white/50"
+          >
             <span>© 2026 Siddhi Farm Resort · All Rights Reserved · Come as you are</span>
             <span className="text-[12px] text-white/70 font-medium tracking-wide">
               Developed &amp; Maintained by <span className="text-emerald-300 font-semibold">Rushikesh Nigade</span>
@@ -909,7 +1037,7 @@ export default function App() {
             <p className="max-w-xl text-[11px] leading-relaxed text-white/45 font-normal">
               A serene 10-acre agro-tourism &amp; luxury farm retreat nestled in the countryside near Pune. Offering private pool villas, authentic organic dining, water park adventures &amp; open-air celebration lawns.
             </p>
-          </div>
+          </motion.div>
         </footer>
 
         {bookingOpen && <BookingPanel pricing={pricing} user={user} onClose={() => setBookingOpen(false)} />}
