@@ -796,11 +796,14 @@ export default function App() {
               <a className="mt-3 block text-sm text-white/70" href="https://www.instagram.com/siddhi_farm_resort"><Instagram className="mr-2 inline" size={14} />Instagram</a>
             </div>
           </div>
-          <div className="container mt-12 flex flex-col items-center justify-center gap-2 border-t border-white/10 pt-5 pb-4 text-center text-xs text-white/50">
-            <span>© 2026 Siddhi Farm Resort · Come as you are</span>
-            <span className="text-[11.5px] text-white/45 font-medium tracking-wide">
+          <div className="container mt-12 flex flex-col items-center justify-center gap-2 border-t border-white/10 pt-6 pb-6 text-center text-xs text-white/50">
+            <span>© 2026 Siddhi Farm Resort · All Rights Reserved · Come as you are</span>
+            <span className="text-[12px] text-white/70 font-medium tracking-wide">
               Developed &amp; Maintained by <span className="text-emerald-300 font-semibold">Rushikesh Nigade</span>
             </span>
+            <p className="max-w-lg text-[11px] leading-relaxed text-white/40 font-normal">
+              Full-Stack Software Engineer &amp; Tech Lead · Engineered with Next.js, Cloud Database &amp; Secure OWASP Architecture for High-Performance Hospitality.
+            </p>
           </div>
         </footer>
 
