@@ -629,7 +629,10 @@ export default function App() {
 
           <div className="container relative z-10 pb-20 pt-36">
             <div className="max-w-3xl">
-              <p className="eyebrow text-[#e3c77c]">Farm stays · Agro tourism · Celebrations</p>
+              <p className="eyebrow flex items-center gap-2 text-[#e3c77c]">
+                <Sparkles size={14} className="text-[#f6bd50] animate-pulse-glow animate-float-slow" />
+                <span>Farm stays · Agro tourism · Celebrations</span>
+              </p>
 
               <h1 className="mt-5 font-serif text-6xl leading-[.95] tracking-tight text-white sm:text-8xl">
                 Come for the <em className="font-normal text-[#e3c77c]">green.</em><br />Stay for the feeling.
