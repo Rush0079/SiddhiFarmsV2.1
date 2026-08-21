@@ -483,10 +483,17 @@ WORKFLOW RULES:
       } catch {}
     }
 
-    const formattedHistory = (conversationHistory || []).slice(-6).map(msg => ({
-      role: msg.role === 'assistant' ? 'model' : 'user',
-      parts: [{ text: msg.content || '' }],
-    }))
+    let formattedHistory = (conversationHistory || [])
+      .filter(msg => msg && msg.content && typeof msg.content === 'string')
+      .map(msg => ({
+        role: msg.role === 'assistant' ? 'model' : 'user',
+        parts: [{ text: msg.content || '' }],
+      }))
+
+    // Google Gemini API strictly requires that the first history entry must have role 'user'
+    while (formattedHistory.length > 0 && formattedHistory[0].role !== 'user') {
+      formattedHistory.shift()
+    }
 
     const chat = model.startChat({
       history: formattedHistory,
