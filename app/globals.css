@@ -170,4 +170,24 @@
   box-shadow: 0 8px 24px -4px rgba(0,0,0,0.25), 0 0 15px rgba(246, 189, 80, 0.2);
 }
 
+@keyframes spinRoundSmooth {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes sparkleDrift {
+  0% { transform: translateY(0px) rotate(0deg) scale(0.9); filter: drop-shadow(0 0 2px rgba(246, 189, 80, 0.4)); }
+  50% { transform: translateY(-4px) rotate(18deg) scale(1.18); filter: drop-shadow(0 0 8px rgba(246, 189, 80, 0.9)); }
+  100% { transform: translateY(0px) rotate(0deg) scale(0.9); filter: drop-shadow(0 0 2px rgba(246, 189, 80, 0.4)); }
+}
+
+.animate-spin-round {
+  animation: spinRoundSmooth 12s linear infinite;
+}
+
+.animate-sparkle-drift {
+  animation: sparkleDrift 3s ease-in-out infinite;
+}
+
+
 
