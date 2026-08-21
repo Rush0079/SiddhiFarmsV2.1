@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Script from 'next/script'
+import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowUpRight, CalendarDays, Check, ChevronDown, CreditCard, Instagram, LogOut, MapPin, Menu, Phone, Sparkles, Star, User, Waves, X, Printer, Share2 } from 'lucide-react'
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser'
 import { siteImage } from '@/lib/siteImages'
@@ -629,25 +630,57 @@ export default function App() {
 
           <div className="container relative z-10 pb-20 pt-36">
             <div className="max-w-3xl">
-              <p className="eyebrow flex items-center gap-2.5 text-[#e3c77c]">
+              <motion.p
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6 }}
+                className="eyebrow flex items-center gap-2.5 text-[#e3c77c]"
+              >
                 <Sparkles size={16} className="text-[#f6bd50] animate-sparkle-drift shrink-0" />
                 <span>Farm stays · Agro tourism · Celebrations</span>
-              </p>
+              </motion.p>
 
-              <h1 className="mt-5 font-serif text-6xl leading-[.95] tracking-tight text-white sm:text-8xl">
+              <motion.h1
+                initial={{ opacity: 0, y: 25 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, delay: 0.15 }}
+                className="mt-5 font-serif text-6xl leading-[.95] tracking-tight text-white sm:text-8xl"
+              >
                 Come for the <em className="font-normal text-[#e3c77c]">green.</em><br />Stay for the feeling.
-              </h1>
-              <p className="mt-7 max-w-lg text-base leading-7 text-white/75">
+              </motion.h1>
+
+              <motion.p
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, delay: 0.3 }}
+                className="mt-7 max-w-lg text-base leading-7 text-white/75"
+              >
                 A quiet corner of the countryside where good food, open skies and unhurried time come together.
-              </p>
-              <div className="mt-9 flex flex-wrap items-center gap-4">
-                <button className="button-light shimmer-button shadow-xl text-sm px-7 py-3.5 font-bold" onClick={() => setBookingOpen(true)}>
+              </motion.p>
+
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, delay: 0.45 }}
+                className="mt-9 flex flex-wrap items-center gap-4"
+              >
+                <motion.button
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
+                  className="button-light shimmer-button shadow-xl text-sm px-7 py-3.5 font-bold"
+                  onClick={() => setBookingOpen(true)}
+                >
                   Plan your visit <ArrowUpRight size={18} />
-                </button>
-                <a className="button-ghost shimmer-button text-sm px-7 py-3.5" href="#story">
+                </motion.button>
+                <motion.a
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
+                  className="button-ghost shimmer-button text-sm px-7 py-3.5"
+                  href="#story"
+                >
                   Discover Siddhi <ArrowUpRight size={18} />
-                </a>
-              </div>
+                </motion.a>
+              </motion.div>
             </div>
           </div>
           <div className="absolute bottom-6 right-8 hidden items-center gap-3 text-xs text-white/60 lg:flex"><span className="h-px w-12 bg-white/40" /> Maharashtra, India</div>
@@ -656,24 +689,36 @@ export default function App() {
         {/* Area 2: Interactive Live Stats Section */}
         <section className="border-b border-[#dfe6dc] bg-[#f4f5ef]">
           <div className="container grid grid-cols-2 divide-x divide-[#dfe6dc] sm:grid-cols-4">
-            {stats.map(([n, label]) => (
-              <div key={label} className="group px-4 py-8 text-center first:pl-0 sm:py-10 transition-all duration-300 hover:bg-white/60">
+            {stats.map(([n, label], idx) => (
+              <motion.div
+                key={label}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: '-40px' }}
+                transition={{ duration: 0.5, delay: idx * 0.1 }}
+                className="group px-4 py-8 text-center first:pl-0 sm:py-10 transition-all duration-300 hover:bg-white/60"
+              >
                 <p className="font-serif text-3xl sm:text-4xl font-bold text-[#315d4c] transition-transform duration-300 group-hover:scale-110 group-hover:text-[#214b40]">{n}</p>
                 <p className="mt-1.5 text-[11px] font-semibold uppercase tracking-[.18em] text-slate-500 group-hover:text-[#b77c4e] transition-colors">{label}</p>
-              </div>
+              </motion.div>
             ))}
           </div>
         </section>
 
         {/* Area 3: Story & Interactive Feature Highlights */}
         <section id="story" className="container grid gap-14 py-24 sm:py-32 md:grid-cols-[.8fr_1.2fr] md:items-center">
-          <div>
+          <motion.div
+            initial={{ opacity: 0, x: -30 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true, margin: '-50px' }}
+            transition={{ duration: 0.6 }}
+          >
             <div className="inline-flex items-center gap-2 rounded-full bg-[#e3eee1] px-3.5 py-1 text-[11px] font-bold uppercase tracking-wider text-[#315d4c] mb-3">
               <span className="h-2 w-2 rounded-full bg-[#315d4c] animate-ping" />
               The Siddhi feeling
             </div>
             <h2 className="section-title">A little closer<br /><em>to what matters.</em></h2>
-          </div>
+          </motion.div>
           <div>
             <p className="max-w-xl text-lg leading-8 text-slate-600">
               At Siddhi Farm Resort, the days are shaped by nature. Wander through our farm, dip into the pool, share a long meal, or simply find a shady spot and do absolutely nothing.
@@ -684,13 +729,21 @@ export default function App() {
                 'Spacious private luxury villas',
                 'Exclusive celebration lawns',
                 'Warm authentic hospitality'
-              ].map((feat) => (
-                <div key={feat} className="flex items-center gap-3 rounded-2xl bg-white border border-[#e1e7dd] p-3.5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-[#315d4c]/40 hover:shadow-md">
+              ].map((feat, idx) => (
+                <motion.div
+                  key={feat}
+                  initial={{ opacity: 0, y: 15 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: '-30px' }}
+                  transition={{ duration: 0.4, delay: idx * 0.1 }}
+                  whileHover={{ y: -4, transition: { duration: 0.2 } }}
+                  className="flex items-center gap-3 rounded-2xl bg-white border border-[#e1e7dd] p-3.5 shadow-sm transition-shadow hover:border-[#315d4c]/40 hover:shadow-md"
+                >
                   <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#e3eee1] text-[#315d4c] font-bold">
                     ✓
                   </div>
                   <span className="font-semibold text-[#173d35]">{feat}</span>
-                </div>
+                </motion.div>
               ))}
             </div>
           </div>
@@ -706,7 +759,17 @@ export default function App() {
               {experiences.map(([slug, title, desc, priceKey, unit], i) => {
                 const rate = pricing[priceKey] || 0
                 return (
-                  <a href={`/details/${slug}`} key={slug} className="luxury-card group block bg-[#214b40] p-8 transition-all duration-300 hover:bg-[#28574a] sm:p-10">
+                  <motion.a
+                    href={`/details/${slug}`}
+                    key={slug}
+                    initial={{ opacity: 0, y: 30 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true, margin: '-50px' }}
+                    transition={{ duration: 0.5, delay: i * 0.08 }}
+                    whileHover={{ y: -6 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="luxury-card group block bg-[#214b40] p-8 transition-colors duration-300 hover:bg-[#28574a] sm:p-10"
+                  >
                     <span className="text-sm font-bold text-[#d5b36a]">0{i + 1}</span>
                     <h3 className="mt-20 font-serif text-3xl transition-transform duration-300 group-hover:translate-x-1">{title}</h3>
                     <p className="mt-4 min-h-14 text-sm leading-6 text-white/65">{desc}</p>
@@ -714,7 +777,7 @@ export default function App() {
                       <span className="font-medium text-[#e3c77c]">₹{rate.toLocaleString('en-IN')} <span className="text-white/50 text-xs">/ {unit.replace('per ', '')}</span></span>
                       <ArrowUpRight className="transition group-hover:translate-x-1 group-hover:-translate-y-1 text-[#d5b36a]" size={18} />
                     </div>
-                  </a>
+                  </motion.a>
                 )
               })}
             </div>
@@ -724,11 +787,28 @@ export default function App() {
         <section id="stay" className="container py-24 sm:py-32">
           <div className="flex flex-wrap items-end justify-between gap-6">
             <div><p className="eyebrow">Stay awhile</p><h2 className="section-title">Your room in<br /><em>the countryside.</em></h2></div>
-            <button className="button-outline shimmer-button" onClick={() => setBookingOpen(true)}>View availability <ArrowUpRight size={16} /></button>
+            <motion.button
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+              className="button-outline shimmer-button"
+              onClick={() => setBookingOpen(true)}
+            >
+              View availability <ArrowUpRight size={16} />
+            </motion.button>
           </div>
           <div className="mt-14 grid gap-6 md:grid-cols-3">
-            {stayCards.map(([slug, no, title, desc, priceKey, imageKey]) => (
-              <a href={`/details/${slug}`} className="stay-card luxury-card group block transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl" key={slug}>
+            {stayCards.map(([slug, no, title, desc, priceKey, imageKey], idx) => (
+              <motion.a
+                href={`/details/${slug}`}
+                className="stay-card luxury-card group block transition-shadow duration-300 hover:shadow-2xl"
+                key={slug}
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: '-50px' }}
+                transition={{ duration: 0.5, delay: idx * 0.12 }}
+                whileHover={{ y: -8 }}
+                whileTap={{ scale: 0.98 }}
+              >
                 <div className="stay-image overflow-hidden" style={{ backgroundImage: `linear-gradient(0deg, rgba(18,57,46,.28), transparent), url(${img(imageKey)})` }}>
                   <span className="shadow-md transition-transform duration-300 group-hover:scale-110">{no}</span>
                 </div>
@@ -737,13 +817,19 @@ export default function App() {
                   <p className="mt-3 text-sm leading-6 text-slate-500">{desc}</p>
                   <div className="mt-4 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-[#315d4c] transition-all group-hover:gap-2.5">View details <ArrowUpRight size={13} /></div>
                 </div>
-              </a>
+              </motion.a>
             ))}
           </div>
         </section>
 
         <section className="container pb-24">
-          <div className="relative overflow-hidden rounded-3xl bg-[#dce8d8] p-8 sm:p-14 border border-[#c8d9c2] shadow-sm">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.97 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true, margin: '-40px' }}
+            transition={{ duration: 0.6 }}
+            className="relative overflow-hidden rounded-3xl bg-[#dce8d8] p-8 sm:p-14 border border-[#c8d9c2] shadow-sm"
+          >
             <div className="relative z-10 max-w-xl">
               <div className="inline-flex items-center gap-2 rounded-full bg-[#315d4c] px-3.5 py-1 text-[11px] font-bold uppercase tracking-wider text-[#d5b36a] shadow-xs">
                 <Sparkles size={13} className="animate-spin text-[#d5b36a]" style={{ animationDuration: '4s' }} /> Coming soon
@@ -757,18 +843,37 @@ export default function App() {
               </div>
             </div>
             <div className="adventure-shape" style={{ backgroundImage: `linear-gradient(135deg, rgba(255,255,255,.35), rgba(112,144,121,.35)), url(${img('adventureShape')})` }} />
-          </div>
+          </motion.div>
         </section>
 
         <section id="gallery" className="bg-[#f0f3ec] py-24 sm:py-32">
           <div className="container">
             <div className="flex flex-wrap items-end justify-between gap-5">
               <div><p className="eyebrow">A glimpse of Siddhi</p><h2 className="section-title">The place is<br /><em>the experience.</em></h2></div>
-              <a href="https://customer-assets-wrfwihn1.emergentagent.net/job_siddhi-farm-dev/artifacts/wgys6sb0_Siddhi%20Farm.pdf" target="_blank" rel="noreferrer" className="button-outline shimmer-button">View full photo story <ArrowUpRight size={16} /></a>
+              <motion.a
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+                href="https://customer-assets-wrfwihn1.emergentagent.net/job_siddhi-farm-dev/artifacts/wgys6sb0_Siddhi%20Farm.pdf"
+                target="_blank"
+                rel="noreferrer"
+                className="button-outline shimmer-button"
+              >
+                View full photo story <ArrowUpRight size={16} />
+              </motion.a>
             </div>
             <div className="gallery-grid mt-14">
-              {[['gallery1', 'Farmhouse'], ['gallery2', 'Villa bedroom'], ['gallery3', 'Swimming pool'], ['gallery4', 'Restaurant'], ['gallery5', 'Party lawn'], ['gallery6', 'Kids adventure']].map(([imageKey, label]) => (
-                <figure key={imageKey} className="gallery-tile luxury-card"><img src={img(imageKey)} alt={`${label} at Siddhi Farm Resort`} loading="lazy" /><figcaption>{label}</figcaption></figure>
+              {[['gallery1', 'Farmhouse'], ['gallery2', 'Villa bedroom'], ['gallery3', 'Swimming pool'], ['gallery4', 'Restaurant'], ['gallery5', 'Party lawn'], ['gallery6', 'Kids adventure']].map(([imageKey, label], idx) => (
+                <motion.figure
+                  key={imageKey}
+                  initial={{ opacity: 0, scale: 0.94 }}
+                  whileInView={{ opacity: 1, scale: 1 }}
+                  viewport={{ once: true, margin: '-40px' }}
+                  transition={{ duration: 0.5, delay: idx * 0.08 }}
+                  className="gallery-tile luxury-card"
+                >
+                  <img src={img(imageKey)} alt={`${label} at Siddhi Farm Resort`} loading="lazy" />
+                  <figcaption>{label}</figcaption>
+                </motion.figure>
               ))}
             </div>
           </div>
