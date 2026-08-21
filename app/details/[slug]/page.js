@@ -10,6 +10,7 @@ import UpiPayment from '@/components/upi-payment'
 import BookingTerms from '@/components/booking-terms'
 import { getWhatsAppShareUrl } from '@/lib/whatsapp'
 import { executeRecaptcha } from '@/lib/recaptcha-client'
+import SiddhiLogo from '@/components/siddhi-logo'
 
 const DETAILS = {
   'master-bedroom': {
@@ -763,8 +764,8 @@ export default function DetailPage({ params }) {
           <img src={siteImage(images, `detail:${slug}:hero`) || config.hero} alt={config.title} className="h-full w-full object-cover" />
           <div className="absolute inset-0 bg-gradient-to-b from-[#0c2a22]/80 via-[#0c2a22]/30 to-[#0c2a22]/70" />
           <div className="container relative z-10 flex h-full flex-col justify-between py-8 text-white">
-            <Link href="/" className="flex w-max items-center gap-2 rounded-full bg-white/15 px-4 py-2 text-xs backdrop-blur hover:bg-white/25">
-              <img src="/icon.png" alt="Siddhi Logo" className="h-5 w-5 rounded-full object-cover" />
+            <Link href="/" className="flex w-max items-center gap-2.5 rounded-full bg-white/15 px-4 py-2 text-xs backdrop-blur hover:bg-white/25">
+              <SiddhiLogo className="h-6 w-6" />
               <ArrowLeft size={14} /> Back to home
             </Link>
             <div>

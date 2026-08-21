@@ -6,9 +6,13 @@ export const metadata = {
   title: 'Siddhi Farm Resort | Come for the green',
   description: 'A quiet countryside farm resort for stays, agro tourism and celebrations.',
   icons: {
-    icon: '/icon.png',
+    icon: [
+      { url: '/logo.svg', type: 'image/svg+xml' },
+      { url: '/siddhi-logo.jpg', type: 'image/jpeg' },
+      { url: '/icon.png' },
+    ],
     shortcut: '/favicon.ico',
-    apple: '/apple-icon.png',
+    apple: '/siddhi-logo.jpg',
   },
 }
 

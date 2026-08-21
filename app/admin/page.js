@@ -9,6 +9,7 @@ import { createSupabaseBrowserClient } from '@/lib/supabase/browser'
 import { IMAGE_SECTIONS } from '@/lib/siteImages'
 import { showSuccess, showError, showAlert, showConfirm, showToast } from '@/lib/swal'
 import { getWhatsAppShareUrl } from '@/lib/whatsapp'
+import SiddhiLogo from '@/components/siddhi-logo'
 
 const labels = {
   masterBedroom: 'Master bedroom (Overnight)',
@@ -387,7 +388,7 @@ export default function AdminPage() {
       <header className="border-b border-[#dbe4d7] bg-[#173d35] text-white">
         <div className="container flex min-h-20 items-center justify-between">
           <div className="flex items-center gap-3">
-            <img src="/icon.png" alt="Siddhi Logo" className="h-10 w-10 rounded-full object-cover border border-[#d5b36a]/40 shadow-sm" />
+            <SiddhiLogo className="h-10 w-10" />
             <div>
               <p className="font-serif text-xl">Siddhi Admin</p>
               <p className="text-[10px] uppercase tracking-[.18em] text-white/55">Operations centre · {profile.role.replace('_', ' ')}</p>

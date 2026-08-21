@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+  <circle cx="50" cy="50" r="48" fill="#2d6a4f" stroke="#d5b36a" stroke-width="2.5"/>
+  <circle cx="50" cy="50" r="44" fill="none" stroke="#d5b36a" stroke-width="0.8" stroke-dasharray="1.5,1.5"/>
+  <!-- Palm fronds in gold & mint -->
+  <path d="M50 48 C50 32 36 24 24 30 C34 32 44 40 48 48 Z" fill="#d5b36a"/>
+  <path d="M50 48 C50 32 64 24 76 30 C66 32 56 40 52 48 Z" fill="#d5b36a"/>
+  <path d="M50 46 C46 28 32 18 20 22 C28 26 40 34 47 46 Z" fill="#74c69d"/>
+  <path d="M50 46 C54 28 68 18 80 22 C72 26 60 34 53 46 Z" fill="#74c69d"/>
+  <path d="M50 42 C50 20 42 12 50 8 C58 12 50 20 50 42 Z" fill="#d5b36a"/>
+  <!-- Palm trunk -->
+  <path d="M48.5 48 L46 76 C48 77 52 77 54 76 L51.5 48 Z" fill="#d5b36a"/>
+  <path d="M49 53 L51 53 M48.5 59 L51.5 59 M48 65 L52 65 M47.5 71 L52.5 71" stroke="#2d6a4f" stroke-width="1"/>
+  <!-- Bottom wreath leaves -->
+  <path d="M30 72 C35 66 42 67 44 72 C38 74 34 75 30 72 Z" fill="#74c69d"/>
+  <path d="M70 72 C65 66 58 67 56 72 C62 74 66 75 70 72 Z" fill="#74c69d"/>
+  <path d="M22 66 C28 60 36 62 38 68 C31 69 26 70 22 66 Z" fill="#d5b36a"/>
+  <path d="M78 66 C72 60 64 62 62 68 C69 69 74 70 78 66 Z" fill="#d5b36a"/>
+</svg>
