@@ -590,12 +590,16 @@ export async function POST(request, { params }) {
       const totalBill = Math.max(0, subtotal - discount)
       const chargeAmount = isAdvanceBooking ? depositAmount : totalBill
       const bookingTerms = await getBookingTerms(admin)
+      const sanitizedName = String(body.name || '').trim().replace(/[<>]/g, '').slice(0, 80)
+      const sanitizedEmail = String(body.email || '').trim().toLowerCase().slice(0, 100)
+      const sanitizedPhone = String(body.phone || '').trim().replace(/[^\d+ -]/g, '').slice(0, 20)
+
       const record = {
         id: bookingId,
         user_id: userId,
-        name: body.name,
-        email: body.email || null,
-        phone: body.phone,
+        name: sanitizedName,
+        email: sanitizedEmail || null,
+        phone: sanitizedPhone,
         service: body.service,
         check_in: body.checkIn,
         check_out: body.checkOut,

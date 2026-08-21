@@ -1,5 +1,6 @@
 const nextConfig = {
   output: 'standalone',
+  poweredByHeader: false,
   // Allows isolated build verification when a local .next cache is locked.
   distDir: process.env.NEXT_DIST_DIR || '.next',
   images: {
