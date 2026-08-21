@@ -139,3 +139,35 @@
   animation: shimmerSweep 0.75s ease-in-out;
 }
 
+@keyframes rotateSunburst {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes ambientOrb {
+  0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.25; }
+  50% { transform: translate(20px, -20px) scale(1.15); opacity: 0.45; }
+}
+
+@keyframes waveMotion {
+  0% { transform: translateX(0) translateZ(0) scaleY(1); }
+  50% { transform: translateX(-25%) translateZ(0) scaleY(0.85); }
+  100% { transform: translateX(-50%) translateZ(0) scaleY(1); }
+}
+
+.animate-sunburst-spin {
+  animation: rotateSunburst 40s linear infinite;
+}
+
+.animate-ambient-orb {
+  animation: ambientOrb 8s ease-in-out infinite;
+}
+
+.nature-glow-badge {
+  background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(229,169,60,0.15) 100%);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(246, 189, 80, 0.35);
+  box-shadow: 0 8px 24px -4px rgba(0,0,0,0.25), 0 0 15px rgba(246, 189, 80, 0.2);
+}
+
+

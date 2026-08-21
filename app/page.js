@@ -621,41 +621,98 @@ export default function App() {
           )}
         </nav>
 
-        <section id="top" className="hero flex min-h-[720px] items-end" style={{ backgroundImage: `linear-gradient(90deg, rgba(12,42,34,.92) 0%, rgba(18,57,46,.62) 48%, rgba(16,47,39,.2) 100%), url(${img('homeHero')})` }}>
+        {/* Area 1: Hero Section with Ambient Motion Graphics */}
+        <section id="top" className="hero flex min-h-[740px] items-end relative overflow-hidden" style={{ backgroundImage: `linear-gradient(90deg, rgba(12,42,34,.94) 0%, rgba(18,57,46,.70) 50%, rgba(16,47,39,.25) 100%), url(${img('homeHero')})` }}>
+          {/* Ambient Rotating Sunburst Aura */}
+          <div className="pointer-events-none absolute -left-32 top-10 h-[500px] w-[500px] rounded-full bg-radial from-[#e5a93c]/20 via-[#315d4c]/10 to-transparent blur-3xl animate-sunburst-spin opacity-70" />
+          <div className="pointer-events-none absolute right-10 top-20 h-[400px] w-[400px] rounded-full bg-radial from-[#74c69d]/15 via-transparent to-transparent blur-2xl animate-ambient-orb" />
+
           <div className="container relative z-10 pb-20 pt-36">
-            <div className="max-w-3xl">
-              <p className="eyebrow text-[#e3c77c] animate-float-slow">Farm stays · Agro tourism · Celebrations</p>
-              <h1 className="mt-5 font-serif text-6xl leading-[.95] tracking-tight text-white sm:text-8xl">Come for the <em className="font-normal text-[#e3c77c]">green.</em><br />Stay for the feeling.</h1>
-              <p className="mt-7 max-w-lg text-base leading-7 text-white/75">A quiet corner of the countryside where good food, open skies and unhurried time come together.</p>
-              <div className="mt-9 flex flex-wrap gap-3">
-                <button className="button-gold shimmer-button shadow-lg shadow-[#d5b36a]/15" onClick={() => setBookingOpen(true)}>Plan your visit <ArrowUpRight size={17} /></button>
-                <a className="button-ghost shimmer-button" href="#story">Discover Siddhi <ArrowUpRight size={17} /></a>
+            <div className="grid gap-12 lg:grid-cols-[1.2fr_0.8fr] lg:items-end">
+              <div className="max-w-3xl">
+                {/* Floating Top Pill */}
+                <div className="inline-flex items-center gap-2 rounded-full nature-glow-badge px-4 py-1.5 text-xs font-semibold text-[#f6bd50] animate-float-slow">
+                  <Sparkles size={14} className="animate-spin text-[#f6bd50]" style={{ animationDuration: '6s' }} />
+                  <span>Farm stays · Agro tourism · Celebrations</span>
+                </div>
+
+                <h1 className="mt-6 font-serif text-6xl leading-[.95] tracking-tight text-white sm:text-8xl">
+                  Come for the <em className="font-normal text-[#f6bd50] drop-shadow-md">green.</em><br />Stay for the feeling.
+                </h1>
+                <p className="mt-7 max-w-lg text-base leading-7 text-white/80">
+                  A quiet corner of the countryside where good food, open skies and unhurried time come together.
+                </p>
+                <div className="mt-9 flex flex-wrap items-center gap-4">
+                  <button className="button-gold shimmer-button shadow-xl shadow-[#d5b36a]/25 text-sm px-6 py-3.5 font-bold" onClick={() => setBookingOpen(true)}>
+                    Plan your visit <ArrowUpRight size={18} />
+                  </button>
+                  <a className="button-ghost shimmer-button text-sm px-6 py-3.5" href="#story">
+                    Discover Siddhi <ArrowUpRight size={18} />
+                  </a>
+                </div>
+              </div>
+
+              {/* Floating Hero Highlights Badge (Area 1 Motion) */}
+              <div className="hidden lg:flex flex-col items-end pb-4">
+                <div className="nature-glow-badge rounded-3xl p-6 text-white max-w-xs animate-float-slow" style={{ animationDelay: '1.5s' }}>
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#e5a93c] text-[#173d35] font-bold shadow-md">
+                      ★
+                    </div>
+                    <div>
+                      <p className="font-serif text-lg font-bold text-white leading-tight">4.9 / 5.0 Rating</p>
+                      <p className="text-xs text-[#e5a93c]">500+ Verified Guests</p>
+                    </div>
+                  </div>
+                  <p className="mt-3 text-xs leading-5 text-white/75 border-t border-white/15 pt-3">
+                    “An unforgettable weekend retreat nestled in lush organic mango orchards.”
+                  </p>
+                </div>
               </div>
             </div>
           </div>
           <div className="absolute bottom-6 right-8 hidden items-center gap-3 text-xs text-white/60 lg:flex"><span className="h-px w-12 bg-white/40" /> Maharashtra, India</div>
         </section>
 
+        {/* Area 2: Interactive Live Stats Section */}
         <section className="border-b border-[#dfe6dc] bg-[#f4f5ef]">
           <div className="container grid grid-cols-2 divide-x divide-[#dfe6dc] sm:grid-cols-4">
             {stats.map(([n, label]) => (
-              <div key={label} className="px-4 py-8 text-center first:pl-0 sm:py-10">
-                <p className="font-serif text-3xl text-[#315d4c]">{n}</p>
-                <p className="mt-1 text-[11px] uppercase tracking-[.16em] text-slate-500">{label}</p>
+              <div key={label} className="group px-4 py-8 text-center first:pl-0 sm:py-10 transition-all duration-300 hover:bg-white/60">
+                <p className="font-serif text-3xl sm:text-4xl font-bold text-[#315d4c] transition-transform duration-300 group-hover:scale-110 group-hover:text-[#214b40]">{n}</p>
+                <p className="mt-1.5 text-[11px] font-semibold uppercase tracking-[.18em] text-slate-500 group-hover:text-[#b77c4e] transition-colors">{label}</p>
               </div>
             ))}
           </div>
         </section>
 
+        {/* Area 3: Story & Interactive Feature Highlights */}
         <section id="story" className="container grid gap-14 py-24 sm:py-32 md:grid-cols-[.8fr_1.2fr] md:items-center">
-          <div><p className="eyebrow">The Siddhi feeling</p><h2 className="section-title">A little closer<br /><em>to what matters.</em></h2></div>
           <div>
-            <p className="max-w-xl text-lg leading-8 text-slate-600">At Siddhi Farm Resort, the days are shaped by nature. Wander through our farm, dip into the pool, share a long meal, or simply find a shady spot and do absolutely nothing.</p>
-            <div className="mt-8 grid gap-3 text-sm text-[#315d4c] sm:grid-cols-2">
-              <span><Check size={16} className="mr-2 inline" /> Farm-fresh experiences</span>
-              <span><Check size={16} className="mr-2 inline" /> Spacious private stays</span>
-              <span><Check size={16} className="mr-2 inline" /> Made for celebrations</span>
-              <span><Check size={16} className="mr-2 inline" /> Warm local hospitality</span>
+            <div className="inline-flex items-center gap-2 rounded-full bg-[#e3eee1] px-3.5 py-1 text-[11px] font-bold uppercase tracking-wider text-[#315d4c] mb-3">
+              <span className="h-2 w-2 rounded-full bg-[#315d4c] animate-ping" />
+              The Siddhi feeling
+            </div>
+            <h2 className="section-title">A little closer<br /><em>to what matters.</em></h2>
+          </div>
+          <div>
+            <p className="max-w-xl text-lg leading-8 text-slate-600">
+              At Siddhi Farm Resort, the days are shaped by nature. Wander through our farm, dip into the pool, share a long meal, or simply find a shady spot and do absolutely nothing.
+            </p>
+            <div className="mt-8 grid gap-3.5 text-sm text-[#315d4c] sm:grid-cols-2">
+              {[
+                'Farm-fresh organic dining',
+                'Spacious private luxury villas',
+                'Exclusive celebration lawns',
+                'Warm authentic hospitality'
+              ].map((feat) => (
+                <div key={feat} className="flex items-center gap-3 rounded-2xl bg-white border border-[#e1e7dd] p-3.5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-[#315d4c]/40 hover:shadow-md">
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#e3eee1] text-[#315d4c] font-bold">
+                    ✓
+                  </div>
+                  <span className="font-semibold text-[#173d35]">{feat}</span>
+                </div>
+              ))}
             </div>
           </div>
         </section>
