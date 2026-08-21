@@ -60,11 +60,11 @@ export default function SiddhiLogo({
         </div>
 
         {/* Brand Typography */}
-        <div className="flex flex-col leading-none pr-1">
-          <span className="font-serif text-lg font-bold tracking-[0.14em] text-white drop-shadow-sm">
+        <div className="flex flex-col leading-none pr-0.5 sm:pr-1">
+          <span className="font-serif text-base sm:text-lg font-bold tracking-[0.12em] sm:tracking-[0.14em] text-white drop-shadow-sm">
             SIDDHI FARMS
           </span>
-          <span className="mt-1 text-[9.5px] font-bold tracking-[0.26em] text-[#f6bd50]">
+          <span className="mt-0.5 sm:mt-1 text-[8.5px] sm:text-[9.5px] font-bold tracking-[0.2em] sm:tracking-[0.26em] text-[#f6bd50]">
             FARM &amp; RESORT · PUNE
           </span>
         </div>

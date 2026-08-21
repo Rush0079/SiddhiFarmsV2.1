@@ -652,19 +652,19 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Floating Hero Highlights Badge (Area 1 Motion) */}
-              <div className="hidden lg:flex flex-col items-end pb-4">
-                <div className="nature-glow-badge rounded-3xl p-6 text-white max-w-xs animate-float-slow" style={{ animationDelay: '1.5s' }}>
+              {/* Floating Hero Highlights Badge (Desktop & Mobile optimized) */}
+              <div className="flex flex-col items-start lg:items-end pt-4 lg:pt-0 pb-2">
+                <div className="nature-glow-badge rounded-3xl p-5 sm:p-6 text-white w-full max-w-sm sm:max-w-xs animate-float-slow" style={{ animationDelay: '1.5s' }}>
                   <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#e5a93c] text-[#173d35] font-bold shadow-md">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#e5a93c] text-[#173d35] font-bold shadow-md">
                       ★
                     </div>
                     <div>
-                      <p className="font-serif text-lg font-bold text-white leading-tight">4.9 / 5.0 Rating</p>
-                      <p className="text-xs text-[#e5a93c]">500+ Verified Guests</p>
+                      <p className="font-serif text-base sm:text-lg font-bold text-white leading-tight">4.9 / 5.0 Rating</p>
+                      <p className="text-xs font-semibold text-[#f6bd50]">500+ Verified Guests</p>
                     </div>
                   </div>
-                  <p className="mt-3 text-xs leading-5 text-white/75 border-t border-white/15 pt-3">
+                  <p className="mt-2.5 text-xs leading-5 text-white/80 border-t border-white/15 pt-2.5">
                     “An unforgettable weekend retreat nestled in lush organic mango orchards.”
                   </p>
                 </div>
@@ -764,15 +764,17 @@ export default function App() {
         </section>
 
         <section className="container pb-24">
-          <div className="relative overflow-hidden rounded-3xl bg-[#dce8d8] p-8 sm:p-14">
+          <div className="relative overflow-hidden rounded-3xl bg-[#dce8d8] p-8 sm:p-14 border border-[#c8d9c2] shadow-sm">
             <div className="relative z-10 max-w-xl">
-              <p className="eyebrow text-[#315d4c]">Coming soon</p>
-              <h2 className="mt-4 font-serif text-5xl leading-none text-[#173d35]">A little more<br /><em>adventure.</em></h2>
-              <p className="mt-5 max-w-sm leading-7 text-[#315d4c]/75">Zip lines, rope courses and wild little memories are on their way to Siddhi.</p>
-              <div className="mt-7 flex flex-wrap gap-2 text-xs uppercase tracking-widest text-[#315d4c]">
-                <span className="rounded-full bg-white/60 px-3 py-2">Zip line</span>
-                <span className="rounded-full bg-white/60 px-3 py-2">Rope course</span>
-                <span className="rounded-full bg-white/60 px-3 py-2">Kids adventure</span>
+              <div className="inline-flex items-center gap-2 rounded-full bg-[#315d4c] px-3.5 py-1 text-[11px] font-bold uppercase tracking-wider text-[#d5b36a] shadow-xs">
+                <Sparkles size={13} className="animate-spin text-[#d5b36a]" style={{ animationDuration: '4s' }} /> Coming soon
+              </div>
+              <h2 className="mt-4 font-serif text-4xl sm:text-5xl leading-none text-[#173d35]">A little more<br /><em>adventure.</em></h2>
+              <p className="mt-5 max-w-sm leading-7 text-[#315d4c]/85 text-sm sm:text-base">Zip lines, rope courses and wild little memories are on their way to Siddhi.</p>
+              <div className="mt-7 flex flex-wrap gap-2.5 text-xs font-semibold uppercase tracking-wider text-[#173d35]">
+                <span className="rounded-full bg-white/80 px-4 py-2 shadow-xs border border-white/80 animate-float-slow transition hover:scale-105" style={{ animationDelay: '0s' }}>🪂 Zip line</span>
+                <span className="rounded-full bg-white/80 px-4 py-2 shadow-xs border border-white/80 animate-float-slow transition hover:scale-105" style={{ animationDelay: '1s' }}>🧗 Rope course</span>
+                <span className="rounded-full bg-white/80 px-4 py-2 shadow-xs border border-white/80 animate-float-slow transition hover:scale-105" style={{ animationDelay: '2s' }}>🏕️ Kids adventure</span>
               </div>
             </div>
             <div className="adventure-shape" style={{ backgroundImage: `linear-gradient(135deg, rgba(255,255,255,.35), rgba(112,144,121,.35)), url(${img('adventureShape')})` }} />

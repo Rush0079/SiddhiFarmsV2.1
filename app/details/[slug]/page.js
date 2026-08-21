@@ -833,8 +833,22 @@ export default function DetailPage({ params }) {
 
         {modalOpen && <BookingModal slug={slug} config={config} pricing={pricing} user={user} onClose={() => setModalOpen(false)} />}
 
+        {/* Mobile Sticky Quick Booking Bar */}
+        <div className="fixed bottom-0 left-0 right-0 z-30 flex items-center justify-between border-t border-white/15 bg-[#173d35]/95 px-5 py-3.5 text-white backdrop-blur-md shadow-2xl lg:hidden">
+          <div>
+            <p className="text-[10px] uppercase tracking-wider text-[#d5b36a] font-semibold">Starting from</p>
+            <p className="font-serif text-xl font-bold leading-tight">₹{price.toLocaleString('en-IN')} <span className="text-xs font-normal text-white/60">/ {config.priceUnit.replace('per ', '')}</span></p>
+          </div>
+          <button
+            onClick={() => setModalOpen(true)}
+            className="button-gold shimmer-button px-5 py-2.5 text-xs font-bold shadow-md"
+          >
+            Reserve now <ArrowUpRight size={15} />
+          </button>
+        </div>
+
         <footer className="mt-20 border-t border-[#dfe7dc] pt-8 text-center text-xs text-slate-400">
-          <div className="container flex flex-col sm:flex-row items-center justify-between gap-2 pb-10 sm:pb-6 sm:pr-48">
+          <div className="container flex flex-col sm:flex-row items-center justify-between gap-2 pb-24 sm:pb-6 sm:pr-48">
             <span>© 2026 Siddhi Farm Resort · Come as you are</span>
             <span className="text-[11px] text-slate-500">Developed & Maintained by <span className="font-semibold text-[#173d35]">Rushikesh Nigade</span></span>
           </div>
