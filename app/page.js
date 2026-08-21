@@ -622,52 +622,28 @@ export default function App() {
         </nav>
 
         {/* Area 1: Hero Section with Ambient Motion Graphics */}
-        <section id="top" className="hero flex min-h-[740px] items-end relative overflow-hidden" style={{ backgroundImage: `linear-gradient(90deg, rgba(12,42,34,.94) 0%, rgba(18,57,46,.70) 50%, rgba(16,47,39,.25) 100%), url(${img('homeHero')})` }}>
+        <section id="top" className="hero flex min-h-[720px] items-end relative overflow-hidden" style={{ backgroundImage: `linear-gradient(90deg, rgba(12,42,34,.92) 0%, rgba(18,57,46,.62) 48%, rgba(16,47,39,.2) 100%), url(${img('homeHero')})` }}>
           {/* Ambient Rotating Sunburst Aura */}
           <div className="pointer-events-none absolute -left-32 top-10 h-[500px] w-[500px] rounded-full bg-radial from-[#e5a93c]/20 via-[#315d4c]/10 to-transparent blur-3xl animate-sunburst-spin opacity-70" />
           <div className="pointer-events-none absolute right-10 top-20 h-[400px] w-[400px] rounded-full bg-radial from-[#74c69d]/15 via-transparent to-transparent blur-2xl animate-ambient-orb" />
 
           <div className="container relative z-10 pb-20 pt-36">
-            <div className="grid gap-12 lg:grid-cols-[1.2fr_0.8fr] lg:items-end">
-              <div className="max-w-3xl">
-                {/* Floating Top Pill */}
-                <div className="inline-flex items-center gap-2 rounded-full nature-glow-badge px-4 py-1.5 text-xs font-semibold text-[#f6bd50] animate-float-slow">
-                  <Sparkles size={14} className="animate-spin text-[#f6bd50]" style={{ animationDuration: '6s' }} />
-                  <span>Farm stays · Agro tourism · Celebrations</span>
-                </div>
+            <div className="max-w-3xl">
+              <p className="eyebrow text-[#e3c77c]">Farm stays · Agro tourism · Celebrations</p>
 
-                <h1 className="mt-6 font-serif text-6xl leading-[.95] tracking-tight text-white sm:text-8xl">
-                  Come for the <em className="font-normal text-[#f6bd50] drop-shadow-md">green.</em><br />Stay for the feeling.
-                </h1>
-                <p className="mt-7 max-w-lg text-base leading-7 text-white/80">
-                  A quiet corner of the countryside where good food, open skies and unhurried time come together.
-                </p>
-                <div className="mt-9 flex flex-wrap items-center gap-4">
-                  <button className="button-gold shimmer-button shadow-xl shadow-[#d5b36a]/25 text-sm px-6 py-3.5 font-bold" onClick={() => setBookingOpen(true)}>
-                    Plan your visit <ArrowUpRight size={18} />
-                  </button>
-                  <a className="button-ghost shimmer-button text-sm px-6 py-3.5" href="#story">
-                    Discover Siddhi <ArrowUpRight size={18} />
-                  </a>
-                </div>
-              </div>
-
-              {/* Floating Hero Highlights Badge (Desktop & Mobile optimized) */}
-              <div className="flex flex-col items-start lg:items-end pt-4 lg:pt-0 pb-2">
-                <div className="nature-glow-badge rounded-3xl p-5 sm:p-6 text-white w-full max-w-sm sm:max-w-xs animate-float-slow" style={{ animationDelay: '1.5s' }}>
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#e5a93c] text-[#173d35] font-bold shadow-md">
-                      ★
-                    </div>
-                    <div>
-                      <p className="font-serif text-base sm:text-lg font-bold text-white leading-tight">4.9 / 5.0 Rating</p>
-                      <p className="text-xs font-semibold text-[#f6bd50]">500+ Verified Guests</p>
-                    </div>
-                  </div>
-                  <p className="mt-2.5 text-xs leading-5 text-white/80 border-t border-white/15 pt-2.5">
-                    “An unforgettable weekend retreat nestled in lush organic mango orchards.”
-                  </p>
-                </div>
+              <h1 className="mt-5 font-serif text-6xl leading-[.95] tracking-tight text-white sm:text-8xl">
+                Come for the <em className="font-normal text-[#e3c77c]">green.</em><br />Stay for the feeling.
+              </h1>
+              <p className="mt-7 max-w-lg text-base leading-7 text-white/75">
+                A quiet corner of the countryside where good food, open skies and unhurried time come together.
+              </p>
+              <div className="mt-9 flex flex-wrap items-center gap-4">
+                <button className="button-light shimmer-button shadow-xl text-sm px-7 py-3.5 font-bold" onClick={() => setBookingOpen(true)}>
+                  Plan your visit <ArrowUpRight size={18} />
+                </button>
+                <a className="button-ghost shimmer-button text-sm px-7 py-3.5" href="#story">
+                  Discover Siddhi <ArrowUpRight size={18} />
+                </a>
               </div>
             </div>
           </div>
@@ -721,7 +697,7 @@ export default function App() {
           <div className="container">
             <div className="flex flex-wrap items-end justify-between gap-6">
               <div><p className="eyebrow text-[#d5b36a]">Choose your pace</p><h2 className="section-title text-white">There is always<br /><em>more to experience.</em></h2></div>
-              <Sparkles className="hidden text-[#d5b36a] md:block" size={42} strokeWidth={1} />
+              <Sparkles className="hidden text-[#d5b36a] md:block animate-float-slow animate-pulse-glow transition-all duration-500 hover:scale-125 hover:rotate-45 cursor-pointer" size={44} strokeWidth={1.2} />
             </div>
             <div className="mt-14 grid gap-px overflow-hidden rounded-2xl bg-white/15 md:grid-cols-3">
               {experiences.map(([slug, title, desc, priceKey, unit], i) => {

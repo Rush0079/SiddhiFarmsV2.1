@@ -7,9 +7,9 @@ export default function SiddhiLogo({
 }) {
   if (variant === 'nav') {
     return (
-      <div className={`flex items-center gap-3.5 select-none rounded-2xl bg-white/[0.08] backdrop-blur-md px-3.5 py-2 border border-[#e5a93c]/35 shadow-lg transition-all duration-300 hover:bg-white/[0.14] hover:border-[#e5a93c]/60 group ${className}`}>
-        {/* Crisp High-Contrast Emblem */}
-        <div className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#0f2e26]/90 p-1 border border-[#e5a93c]/40 shadow-inner">
+      <div className={`flex items-center gap-3.5 select-none transition-all duration-300 hover:opacity-90 group ${className}`}>
+        {/* Crisp Vector Emblem */}
+        <div className="relative flex h-11 w-11 shrink-0 items-center justify-center">
           <svg viewBox="0 0 300 300" className="h-full w-full overflow-visible" fill="none">
             {/* Radiant Glowing Sun Rays */}
             <g
@@ -35,7 +35,7 @@ export default function SiddhiLogo({
             <path
               d="M150 120 C186 152 192 200 150 228 C108 200 114 152 150 120 Z"
               fill="url(#navLeafGradient)"
-              stroke="#74c69d"
+              stroke="#8cd8b0"
               strokeWidth="2.5"
             />
 
@@ -61,10 +61,10 @@ export default function SiddhiLogo({
 
         {/* Brand Typography */}
         <div className="flex flex-col leading-none pr-0.5 sm:pr-1">
-          <span className="font-serif text-base sm:text-lg font-bold tracking-[0.12em] sm:tracking-[0.14em] text-white drop-shadow-sm">
+          <span className="font-serif text-lg sm:text-xl font-bold tracking-[0.14em] text-white drop-shadow-sm">
             SIDDHI FARMS
           </span>
-          <span className="mt-0.5 sm:mt-1 text-[8.5px] sm:text-[9.5px] font-bold tracking-[0.2em] sm:tracking-[0.26em] text-[#f6bd50]">
+          <span className="mt-1 text-[9px] sm:text-[10px] font-bold tracking-[0.26em] text-[#f6bd50]">
             FARM &amp; RESORT · PUNE
           </span>
         </div>
