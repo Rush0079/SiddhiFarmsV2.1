@@ -801,8 +801,8 @@ export default function App() {
             <span className="text-[12px] text-white/70 font-medium tracking-wide">
               Developed &amp; Maintained by <span className="text-emerald-300 font-semibold">Rushikesh Nigade</span>
             </span>
-            <p className="max-w-lg text-[11px] leading-relaxed text-white/40 font-normal">
-              Full-Stack Software Engineer &amp; Tech Lead · Engineered with Next.js, Cloud Database &amp; Secure OWASP Architecture for High-Performance Hospitality.
+            <p className="max-w-xl text-[11px] leading-relaxed text-white/45 font-normal">
+              A serene 10-acre agro-tourism &amp; luxury farm retreat nestled in the countryside near Pune. Offering private pool villas, authentic organic dining, water park adventures &amp; open-air celebration lawns.
             </p>
           </div>
         </footer>
