@@ -93,7 +93,7 @@ export default function AiConcierge() {
 
   const isDetailsPage = pathname?.startsWith('/details')
 
-  if (pathname === '/login') return null
+  if (pathname === '/login' || pathname?.startsWith('/jarvis')) return null
 
   return (
     <>
