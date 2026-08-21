@@ -847,10 +847,12 @@ export default function DetailPage({ params }) {
           </button>
         </div>
 
-        <footer className="mt-20 border-t border-[#dfe7dc] pt-8 text-center text-xs text-slate-400">
-          <div className="container flex flex-col sm:flex-row items-center justify-between gap-2 pb-24 sm:pb-6 sm:pr-48">
+        <footer className="mt-20 border-t border-[#dfe7dc] pt-8 text-center text-xs text-slate-500">
+          <div className="container flex flex-col items-center justify-center gap-2 pb-36 sm:pb-10 text-center">
             <span>© 2026 Siddhi Farm Resort · Come as you are</span>
-            <span className="text-[11px] text-slate-500">Developed & Maintained by <span className="font-semibold text-[#173d35]">Rushikesh Nigade</span></span>
+            <span className="text-[11.5px] text-slate-500 font-medium">
+              Developed &amp; Maintained by <span className="font-semibold text-[#173d35]">Rushikesh Nigade</span>
+            </span>
           </div>
         </footer>
       </main>
