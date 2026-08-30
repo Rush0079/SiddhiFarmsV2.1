@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import Script from 'next/script'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowUpRight, CalendarDays, Check, ChevronDown, CreditCard, Instagram, LogOut, MapPin, Menu, Phone, Sparkles, Star, User, Waves, X, Printer, Share2 } from 'lucide-react'
+import { ArrowUpRight, CalendarDays, Check, ChevronDown, ChevronLeft, ChevronRight, CreditCard, Instagram, LogOut, MapPin, Menu, Phone, Sparkles, Star, User, Waves, X, Printer, Share2, Clock, Zap } from 'lucide-react'
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser'
 import { siteImage } from '@/lib/siteImages'
 import UpiPayment from '@/components/upi-payment'
@@ -45,7 +45,175 @@ function calculateHoursDuration(inStr, outStr) {
   return Number.isInteger(hours) ? `${hours} Hours` : `${hours.toFixed(1)} Hours`
 }
 
-function BookingPanel({ pricing, user, onClose }) {
+function PromotionalCarousel({ flashSale, onBook, timeLeft }) {
+  const [currentSlide, setCurrentSlide] = useState(0)
+  const slides = [
+    {
+      badge: flashSale.badgeText || '⚡ FLASH SALE',
+      title: flashSale.name || 'Special Seasonal Offer',
+      highlight: flashSale.discountType === 'percentage' ? `${flashSale.discountValue}% OFF` : `₹${flashSale.discountValue} FLAT DISCOUNT`,
+      desc: flashSale.bannerMessage || 'Book your dream countryside stay today and enjoy luxury private pool villas, authentic organic meals, and exclusive seasonal savings.',
+      perk: '🏷️ Instant promotional discount applied on checkout',
+    },
+    {
+      badge: '🏊 COMPLIMENTARY INCLUSIONS',
+      title: 'Water Park & Swimming Pool Access',
+      highlight: 'FREE FOR GUESTS',
+      desc: 'Every reservation booked during this flash sale includes complimentary access to our Mini Water Park, shaded pool loungers, and expansive celebration lawns.',
+      perk: '🌴 Unlimited pool fun, rain dance & lawn games included',
+    },
+    {
+      badge: '⏳ LIMITED AVAILABILITY',
+      title: 'Hurry! Promotional Rate Ending Soon',
+      highlight: timeLeft || 'Ends Soon',
+      desc: 'Rooms and villas are filling up rapidly for upcoming weekend dates. Lock in your special rate today before this campaign concludes.',
+      perk: '🛡️ Instant reservation with flexible check-in timings',
+    },
+  ]
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentSlide(prev => (prev + 1) % slides.length)
+    }, 4500)
+    return () => clearInterval(timer)
+  }, [slides.length])
+
+  const slide = slides[currentSlide]
+  const bannerImage = flashSale.imageUrl || 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=80'
+
+  return (
+    <section className="container py-8 sm:py-12">
+      <motion.div
+        initial={{ opacity: 0, y: 25 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.6 }}
+        className="relative overflow-hidden rounded-3xl border border-amber-400/40 bg-gradient-to-br from-[#123830] via-[#17483d] to-[#0c2822] p-6 text-white shadow-2xl sm:p-10"
+      >
+        {/* Ambient Glowing Motion Backdrops */}
+        <div className="pointer-events-none absolute -right-24 -top-24 h-96 w-96 rounded-full bg-amber-500/15 blur-3xl animate-pulse" />
+        <div className="pointer-events-none absolute -left-20 -bottom-20 h-80 w-80 rounded-full bg-emerald-400/10 blur-3xl" />
+
+        <div className="relative z-10 grid gap-8 lg:grid-cols-[1.15fr_0.85fr] lg:items-center">
+          {/* Left Column: Animated Motion Carousel Content */}
+          <div className="flex flex-col justify-between">
+            <div>
+              {/* Animated Badge & Ticker */}
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 px-3.5 py-1 text-xs font-black uppercase tracking-wider text-amber-950 shadow-md animate-pulse">
+                  <Zap size={14} className="fill-amber-950" />
+                  {slide.badge}
+                </span>
+                {timeLeft && (
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-black/40 border border-amber-400/30 px-3 py-1 font-mono text-xs font-bold text-amber-300 backdrop-blur-md">
+                    <Clock size={13} />
+                    {timeLeft}
+                  </span>
+                )}
+              </div>
+
+              {/* Slide Content with Motion Transition */}
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={currentSlide}
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ duration: 0.35, ease: 'easeInOut' }}
+                  className="mt-5"
+                >
+                  <div className="flex flex-wrap items-baseline gap-3">
+                    <h3 className="font-serif text-2xl font-bold sm:text-3xl text-white">
+                      {slide.title}
+                    </h3>
+                    <span className="rounded-xl bg-amber-400/20 border border-amber-400/40 px-3 py-1 text-sm font-black text-amber-300">
+                      {slide.highlight}
+                    </span>
+                  </div>
+                  <p className="mt-3 text-sm sm:text-base leading-relaxed text-white/80 max-w-xl">
+                    {slide.desc}
+                  </p>
+                  <div className="mt-4 flex items-center gap-2 text-xs font-semibold text-amber-200/90">
+                    <span>{slide.perk}</span>
+                  </div>
+                </motion.div>
+              </AnimatePresence>
+            </div>
+
+            {/* Bottom Controls & Action */}
+            <div className="mt-8 flex flex-wrap items-center justify-between gap-4 border-t border-white/10 pt-6">
+              {/* Carousel Dot Indicators & Arrows */}
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setCurrentSlide(prev => (prev - 1 + slides.length) % slides.length)}
+                  className="rounded-full border border-white/20 p-2 hover:bg-white/10 transition"
+                  aria-label="Previous promotional slide"
+                >
+                  <ChevronLeft size={16} />
+                </button>
+                <div className="flex items-center gap-1.5">
+                  {slides.map((_, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setCurrentSlide(idx)}
+                      className={`h-2 rounded-full transition-all ${
+                        currentSlide === idx ? 'w-7 bg-amber-400' : 'w-2 bg-white/30 hover:bg-white/50'
+                      }`}
+                      aria-label={`Go to slide ${idx + 1}`}
+                    />
+                  ))}
+                </div>
+                <button
+                  onClick={() => setCurrentSlide(prev => (prev + 1) % slides.length)}
+                  className="rounded-full border border-white/20 p-2 hover:bg-white/10 transition"
+                  aria-label="Next promotional slide"
+                >
+                  <ChevronRight size={16} />
+                </button>
+              </div>
+
+              {/* Action Button */}
+              <motion.button
+                whileHover={{ scale: 1.04, y: -1 }}
+                whileTap={{ scale: 0.97 }}
+                onClick={onBook}
+                className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-amber-400 via-amber-300 to-amber-500 px-6 py-3 text-sm font-extrabold text-amber-950 shadow-xl hover:shadow-amber-500/25 transition-all cursor-pointer"
+              >
+                <span>Claim Offer &amp; Book Now</span>
+                <ArrowUpRight size={17} />
+              </motion.button>
+            </div>
+          </div>
+
+          {/* Right Column: Responsive Poster Image with Overlay Gradient */}
+          <div className="relative group overflow-hidden rounded-2xl border border-white/15 bg-black/30 aspect-[16/10] sm:aspect-[16/9] lg:aspect-[4/3]">
+            <img
+              src={bannerImage}
+              alt={flashSale.name || 'Promotional Flash Sale'}
+              className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent" />
+            <div className="absolute bottom-4 left-4 right-4 flex items-end justify-between gap-2">
+              <div>
+                <span className="rounded-lg bg-black/60 backdrop-blur-md px-2.5 py-1 text-[11px] font-bold text-amber-300 border border-white/10">
+                  {flashSale.badgeText || '⚡ LIMITED TIME CAMPAIGN'}
+                </span>
+                <p className="mt-1 text-xs font-medium text-white/90 truncate max-w-[200px] sm:max-w-xs">
+                  {flashSale.name || 'Special Seasonal Rate'}
+                </p>
+              </div>
+              <span className="rounded-full bg-amber-400 text-amber-950 px-3 py-1 text-xs font-extrabold shadow-sm shrink-0">
+                {flashSale.discountType === 'percentage' ? `${flashSale.discountValue}% OFF` : `₹${flashSale.discountValue} OFF`}
+              </span>
+            </div>
+          </div>
+        </div>
+      </motion.div>
+    </section>
+  )
+}
+
+function BookingPanel({ pricing, user, onClose, flashSale }) {
   const [form, setForm] = useState({ name: user?.user_metadata?.full_name || '', email: user?.email || '', phone: user?.user_metadata?.phone || '', checkIn: '', checkOut: '', service: 'Master Bedroom', guests: '2', couponCode: '', aadhaarNumber: '', termsAccepted: false })
   const [stayType, setStayType] = useState('overnight') // 'overnight' | 'short_stay'
   const [shortStayInTime, setShortStayInTime] = useState('11:00')
@@ -80,8 +248,20 @@ function BookingPanel({ pricing, user, onClose }) {
   } else {
     subtotal = rate * nights
   }
-  
-  const estimate = Math.max(0, Number(subtotal) - Number(discount || 0))
+
+  // Automatic Flash Sale calculation (when no custom coupon is overriding)
+  const isFlashApplicable = flashSale && (
+    flashSale.applicableServices === 'all' ||
+    (Array.isArray(flashSale.applicableServices) && flashSale.applicableServices.includes(form.service))
+  )
+  const flashSaleDiscount = isFlashApplicable && !appliedCoupon
+    ? (flashSale.discountType === 'fixed'
+        ? Math.min(subtotal, Number(flashSale.discountValue || 0))
+        : Math.round(subtotal * Math.min(100, Number(flashSale.discountValue || 0)) / 100))
+    : 0
+
+  const activeDiscount = appliedCoupon ? discount : flashSaleDiscount
+  const estimate = Math.max(0, Number(subtotal) - Number(activeDiscount || 0))
 
   const advanceDeposit = appliedAdvance
     ? (appliedAdvance.percentage ? Math.round(estimate * Math.min(100, appliedAdvance.percentage) / 100) : Math.min(estimate, Number(appliedAdvance.fixedAmount || 0)))
@@ -510,10 +690,19 @@ function BookingPanel({ pricing, user, onClose }) {
               <div className="flex items-center justify-between rounded-xl bg-[#edf1e8] p-4 text-sm sm:col-span-2">
                 <div>
                   <span>Estimated total · {nights} night{nights > 1 ? 's' : ''}</span>
-                  {discount > 0 && <span className="block text-xs text-green-600 mt-1">Discount applied: ₹{discount.toLocaleString('en-IN')}</span>}
+                  {appliedCoupon && discount > 0 && (
+                    <span className="block text-xs text-green-600 mt-1 font-semibold">
+                      ✓ Promo discount: −₹{discount.toLocaleString('en-IN')}
+                    </span>
+                  )}
+                  {!appliedCoupon && flashSaleDiscount > 0 && (
+                    <span className="block text-xs text-amber-800 font-bold mt-1">
+                      {flashSale?.badgeText || '⚡ Flash Sale'}: −₹{flashSaleDiscount.toLocaleString('en-IN')} ({flashSale?.discountType === 'percentage' ? `${flashSale?.discountValue}% OFF` : `₹${flashSale?.discountValue} OFF`})
+                    </span>
+                  )}
                 </div>
                 <div className="text-right">
-                  {discount > 0 && <p className="line-through text-slate-500 text-sm">₹{subtotal.toLocaleString('en-IN')}</p>}
+                  {activeDiscount > 0 && <p className="line-through text-slate-500 text-sm">₹{subtotal.toLocaleString('en-IN')}</p>}
                   <strong className="text-lg text-[#173d35]">₹{estimate.toLocaleString('en-IN')}</strong>
                 </div>
               </div>
@@ -554,11 +743,16 @@ export default function App() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [user, setUser] = useState(null)
   const [profile, setProfile] = useState(null)
+  const [flashSale, setFlashSale] = useState(null)
+  const [saleTimeRemaining, setSaleTimeRemaining] = useState('')
   const supabase = useMemo(() => createSupabaseBrowserClient(), [])
 
   useEffect(() => {
     fetch('/api/pricing').then(r => r.json()).then(setPricing).catch(() => {})
     fetch('/api/images').then(r => r.json()).then(setImages).catch(() => {})
+    fetch('/api/flash-sale').then(r => r.json()).then(d => {
+      if (d?.active && d?.sale) setFlashSale(d.sale)
+    }).catch(() => {})
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       setUser(user)
       if (user) {
@@ -573,6 +767,30 @@ export default function App() {
     return () => sub?.subscription?.unsubscribe?.()
   }, [supabase])
 
+  // Live Flash Sale Countdown Ticker
+  useEffect(() => {
+    if (!flashSale?.endDateTime) return
+    const updateCountdown = () => {
+      const diff = new Date(flashSale.endDateTime).getTime() - Date.now()
+      if (diff <= 0) {
+        setSaleTimeRemaining('Ending soon')
+        return
+      }
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
+      const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
+      const secs = Math.floor((diff % (1000 * 60)) / 1000)
+      if (days > 0) {
+        setSaleTimeRemaining(`${days}d ${hours}h ${mins}m ${secs}s`)
+      } else {
+        setSaleTimeRemaining(`${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`)
+      }
+    }
+    updateCountdown()
+    const interval = setInterval(updateCountdown, 1000)
+    return () => clearInterval(interval)
+  }, [flashSale])
+
   async function signOut() {
     await supabase.auth.signOut()
     setUser(null); setProfile(null)
@@ -585,8 +803,51 @@ export default function App() {
   return (
     <>
       <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="lazyOnload" />
-      <main>
-        <nav className="absolute left-0 right-0 top-0 z-20">
+      <main className="relative">
+        {flashSale && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="relative z-30 overflow-hidden bg-gradient-to-r from-amber-600 via-amber-500 to-amber-700 text-amber-950 px-4 py-2.5 text-xs font-medium shadow-lg border-b border-amber-400"
+          >
+            <div className="container relative z-10 flex flex-wrap items-center justify-between gap-2.5">
+              <div className="flex flex-wrap items-center gap-2.5 font-bold tracking-wide">
+                <motion.span
+                  animate={{ scale: [1, 1.06, 1] }}
+                  transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+                  className="rounded-full bg-amber-950 px-3 py-0.5 text-[11px] font-black uppercase text-amber-300 shadow-xs flex items-center gap-1.5"
+                >
+                  <Zap size={12} className="fill-amber-300 text-amber-300" />
+                  {flashSale.badgeText || '⚡ FLASH SALE'}
+                </motion.span>
+                <span className="text-amber-950 font-bold text-sm">
+                  {flashSale.name || 'Special Promotional Offer'}:
+                </span>
+                <span className="text-amber-950/90 font-medium hidden sm:inline">
+                  {flashSale.bannerMessage || (flashSale.discountType === 'percentage' ? `Special ${flashSale.discountValue}% OFF discount applied across all stays!` : `Special ₹${flashSale.discountValue} OFF discount applied across all stays!`)}
+                </span>
+              </div>
+              <div className="flex items-center gap-3">
+                {saleTimeRemaining && (
+                  <div className="flex items-center gap-1.5 rounded-lg bg-amber-950/15 border border-amber-900/20 px-2.5 py-1 font-mono text-xs font-bold text-amber-950">
+                    <Clock size={13} />
+                    <span>Ends in: {saleTimeRemaining}</span>
+                  </div>
+                )}
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setBookingOpen(true)}
+                  className="rounded-full bg-amber-950 px-3.5 py-1 text-xs font-bold text-amber-200 hover:bg-black transition shadow-sm cursor-pointer"
+                >
+                  Book with Sale Rate →
+                </motion.button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+        <nav className={`absolute left-0 right-0 z-20 ${flashSale ? 'top-10' : 'top-0'}`}>
           <div className="container flex h-24 items-center justify-between">
             <motion.a
               href="#top"
@@ -781,6 +1042,15 @@ export default function App() {
             ))}
           </div>
         </section>
+
+        {/* Promotional Motion Graphics Carousel (When Flash Sale is Active) */}
+        {flashSale && (
+          <PromotionalCarousel
+            flashSale={flashSale}
+            onBook={() => setBookingOpen(true)}
+            timeLeft={saleTimeRemaining}
+          />
+        )}
 
         {/* Area 3: Story & Interactive Feature Highlights */}
         <section id="story" className="container grid gap-14 py-24 sm:py-32 md:grid-cols-[.8fr_1.2fr] md:items-center">
@@ -1042,7 +1312,7 @@ export default function App() {
           </motion.div>
         </footer>
 
-        {bookingOpen && <BookingPanel pricing={pricing} user={user} onClose={() => setBookingOpen(false)} />}
+        {bookingOpen && <BookingPanel pricing={pricing} user={user} onClose={() => setBookingOpen(false)} flashSale={flashSale} />}
       </main>
     </>
   )

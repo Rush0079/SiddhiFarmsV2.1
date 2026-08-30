@@ -1,3 +1,24 @@
+/**
+ * ============================================================================
+ * SIDDHI FARM RESORT - AI CONCIERGE CHAT API ROUTE
+ * ============================================================================
+ * 
+ * DESIGN PATTERNS APPLIED:
+ * 1. Strategy & Fallback Engine Pattern:
+ *    Tries candidate generative AI models sequentially (`gemini-3.6-flash` -> `gemini-3.7-flash` -> `gemini-2.5-flash`),
+ *    gracefully degrading to a local rule-based intent matching engine if all external LLM calls fail.
+ * 
+ * 2. Sliding-Window Rate Limiter:
+ *    Prevents prompt injection exhaustion and abuse per client IP.
+ * 
+ * 3. Dynamic Context Injection:
+ *    Injects real-time pricing matrix from Supabase PostgreSQL directly into the LLM system prompt.
+ * 
+ * LOGGING CONVENTION:
+ * [API:CHAT:<ACTION>] <DETAILS>
+ * ============================================================================
+ */
+
 import { NextResponse } from 'next/server'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { supabaseAdmin } from '@/lib/supabase/admin'
@@ -8,12 +29,18 @@ const DEFAULT_PHONE = '7083682768'
 const GOOGLE_MAPS_LINK = 'https://maps.app.goo.gl/iBiKXi45sJ99vrV69'
 const CANDIDATE_MODELS = ['gemini-3.6-flash', 'gemini-3.7-flash', 'gemini-2.5-flash', 'gemini-flash-latest']
 
+/**
+ * Handles incoming customer chat messages and streams/generates conversational responses.
+ * @param {Request} req - Incoming Next.js request containing { message, conversationHistory }
+ * @returns {Promise<NextResponse>} JSON response with { reply: string }
+ */
 export async function POST(req) {
   try {
     const ip = getClientIp(req)
     // Rate limit: 25 messages / 2 minutes per IP
-    const limit = checkRateLimit(ip, 25, 2 * 60 * 1000)
+    const limit = checkRateLimit(ip, 'chat_messages', 25, 2 * 60 * 1000)
     if (!limit.allowed) {
+      console.warn(`[API:CHAT:RATE_LIMIT] IP ${ip} throttled on AI concierge`)
       return NextResponse.json({
         reply: 'You are sending messages too quickly. Please wait a moment before sending another query.',
       }, { status: 429 })
@@ -26,6 +53,8 @@ export async function POST(req) {
       return NextResponse.json({ error: 'Message is required' }, { status: 400 })
     }
 
+    console.log(`[API:CHAT:QUERY] Incoming prompt from ${ip}: "${message.slice(0, 60)}${message.length > 60 ? '...' : ''}"`)
+
     // Fetch live resort rates from database
     let pricingInfo = 'Master Bedroom: ₹4,500/night, 2 BHK Villa: ₹9,000/night, 4 BHK Villa: ₹15,000/night, One Day Tour: ₹700/person, Mini Water Park: ₹950/person, Birthday Party: ₹12,000, Engagement Ceremony: ₹18,000, Wedding Ceremony: ₹35,000, Get Together: ₹10,000.'
     try {
@@ -35,12 +64,15 @@ export async function POST(req) {
         const v = pData.values
         pricingInfo = `Master Bedroom: ₹${v.masterBedroom || 4500}/night, 2 BHK Villa: ₹${v.villa2BHK || 9000}/night, 4 BHK Villa: ₹${v.villa4BHK || 15000}/night, One Day Tour: ₹${v.oneDayTour || 700}/person, Mini Water Park: ₹${v.miniWaterPark || 950}/person, Birthday Party: ₹${v.birthdayEvent || 12000}, Engagement Ceremony: ₹${v.engagementEvent || 18000}, Wedding Ceremony: ₹${v.weddingEvent || 35000}, Get Together: ₹${v.getTogetherEvent || 10000}.`
       }
-    } catch {}
+    } catch (err) {
+      console.warn('[API:CHAT:PRICING_FALLBACK] Failed fetching live pricing for system prompt:', err.message)
+    }
 
     const apiKey = process.env.GEMINI_API_KEY
 
     // Fallback if GEMINI_API_KEY is not configured
     if (!apiKey) {
+      console.log('[API:CHAT:RULE_BASED_FALLBACK] GEMINI_API_KEY missing, using rules engine')
       const fallbackReply = generateSmartFallbackReply(message.trim(), pricingInfo)
       return NextResponse.json({ reply: fallbackReply })
     }
@@ -96,7 +128,10 @@ TONE & GUIDELINES:
         const chat = model.startChat({ history })
         const result = await chat.sendMessage(message)
         reply = result.response.text()
-        if (reply) break
+        if (reply) {
+          console.log(`[API:CHAT:SUCCESS] Generated reply using model "${modelName}"`)
+          break
+        }
       } catch (err) {
         lastError = err
         continue
@@ -104,13 +139,13 @@ TONE & GUIDELINES:
     }
 
     if (!reply) {
-      console.warn('All candidate Gemini models failed, falling back to rules engine:', lastError?.message)
+      console.warn('[API:CHAT:MODELS_FAILED] All candidate Gemini models failed, falling back to rules engine:', lastError?.message)
       reply = generateSmartFallbackReply(message.trim(), pricingInfo)
     }
 
     return NextResponse.json({ reply })
   } catch (error) {
-    console.error('Gemini Chat API Error:', error?.message || error)
+    console.error('[API:CHAT:FATAL_ERROR]', error?.message || error)
     return NextResponse.json({
       reply: `Thank you for reaching out to Siddhi Farm Resort! For immediate assistance, feel free to call or WhatsApp our resort manager at +91 ${DEFAULT_PHONE}, or click the "Reserve" button on the website to view room availability. 🌿`,
     })

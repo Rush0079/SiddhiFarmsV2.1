@@ -4,7 +4,7 @@ export const dynamic = 'force-dynamic'
 
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Check, Clock3, Edit3, Image as ImageIcon, LayoutDashboard, LogOut, Percent, Plus, QrCode, RotateCcw, Save, ScrollText, ShieldCheck, Trash2, Upload, Users, Loader2, X, FileText, Share2, Printer } from 'lucide-react'
+import { ArrowLeft, Check, Clock3, Edit3, Image as ImageIcon, LayoutDashboard, LogOut, Percent, Plus, QrCode, RotateCcw, Save, ScrollText, ShieldCheck, Trash2, Upload, Users, Loader2, X, FileText, Share2, Printer, Zap } from 'lucide-react'
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser'
 import { IMAGE_SECTIONS } from '@/lib/siteImages'
 import { showSuccess, showError, showAlert, showConfirm, showToast } from '@/lib/swal'
@@ -61,9 +61,24 @@ export default function AdminPage() {
   const [advanceForm, setAdvanceForm] = useState({ code: '', percentage: '50', fixedAmount: '' })
   const [newAdmin, setNewAdmin] = useState({ name: '', email: '', password: '', phone: '', role: 'staff' })
   const [creatingAdmin, setCreatingAdmin] = useState(false)
+  const [flashSale, setFlashSale] = useState({
+    enabled: false,
+    name: '',
+    badgeText: '⚡ FLASH SALE',
+    discountType: 'percentage',
+    discountValue: 20,
+    startDateTime: '',
+    endDateTime: '',
+    bannerMessage: '',
+    applicableServices: 'all',
+    imageUrl: '',
+  })
+  const [savingSale, setSavingSale] = useState(false)
+  const [bannerUploading, setBannerUploading] = useState(false)
+  const bannerFileInputRef = useRef(null)
 
   async function loadAll() {
-    const [p, s, b, c, i, pay, terms, adv] = await Promise.all([
+    const [p, s, b, c, i, pay, terms, adv, fs] = await Promise.all([
       fetch('/api/pricing'),
       fetch('/api/admin/summary'),
       fetch('/api/bookings'),
@@ -72,6 +87,7 @@ export default function AdminPage() {
       fetch('/api/payments/config'),
       fetch('/api/booking-terms'),
       fetch('/api/advance-codes'),
+      fetch('/api/flash-sale'),
     ])
     setPricing(await p.json())
     setSummary(await s.json())
@@ -83,6 +99,8 @@ export default function AdminPage() {
     setBookingTerms(termsData)
     setTermsText((termsData.terms || []).join('\n'))
     if (adv.ok) setAdvanceCodes(await adv.json())
+    const fsData = await fs.json().catch(() => ({}))
+    if (fsData.config) setFlashSale(fsData.config)
 
     const cust = await fetch('/api/admin/customers')
     if (cust.ok) setCustomers(await cust.json())
@@ -307,14 +325,23 @@ export default function AdminPage() {
     showToast(`Role updated to ${role}`)
     loadAll()
   }
+  function checkPasswordComplexity(pw) {
+    if (!pw || pw.length < 10) return 'Password must be at least 10 characters long.'
+    if (!/[A-Z]/.test(pw)) return 'Password must contain at least one uppercase letter (A-Z).'
+    if (!/[0-9]/.test(pw)) return 'Password must contain at least one digit (0-9).'
+    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?`~]/.test(pw)) return 'Password must contain at least one special character (e.g. !@#$%^&*).'
+    return null
+  }
+
   async function createAdminUser(event) {
     event.preventDefault()
     if (!newAdmin.name.trim() || !newAdmin.email.trim() || !newAdmin.password) {
       showError('Validation Error', 'Please enter a name, email address, and password.')
       return
     }
-    if (newAdmin.password.length < 8) {
-      showError('Password Too Short', 'Password must be at least 8 characters long.')
+    const pwErr = checkPasswordComplexity(newAdmin.password)
+    if (pwErr) {
+      showError('Password Requirements', `${pwErr}\n\nRequirements:\n• Min 10 characters\n• At least 1 uppercase letter (A-Z)\n• At least 1 number (0-9)\n• At least 1 special character (!@#$%^&*)`)
       return
     }
     setCreatingAdmin(true)
@@ -326,7 +353,7 @@ export default function AdminPage() {
     const data = await res.json().catch(() => ({}))
     setCreatingAdmin(false)
     if (res.ok) {
-      showSuccess('Admin Account Created', `Created account for ${newAdmin.name} (${newAdmin.email}) with role "${newAdmin.role.replace('_', ' ')}".`)
+      showSuccess('Team Account Created', `Created account for ${newAdmin.name} (${newAdmin.email}) with role "${newAdmin.role.replace('_', ' ')}".`)
       setNewAdmin({ name: '', email: '', password: '', phone: '', role: 'staff' })
       loadAll()
     } else {
@@ -358,6 +385,46 @@ export default function AdminPage() {
       showError('Delete Failed', d.error || 'Could not delete user account')
     }
   }
+
+  async function uploadBannerImage(file) {
+    setBannerUploading(true)
+    const fd = new FormData()
+    fd.append('file', file)
+    const res = await fetch('/api/flash-sale/upload', { method: 'POST', body: fd })
+    setBannerUploading(false)
+    if (res.ok) {
+      const d = await res.json()
+      setFlashSale(prev => ({ ...prev, imageUrl: d.url }))
+      showToast('Campaign banner uploaded successfully')
+    } else {
+      const d = await res.json().catch(() => ({}))
+      showError('Upload Failed', d.error || 'Could not upload banner image')
+    }
+  }
+
+  async function saveFlashSale(event) {
+    if (event) event.preventDefault()
+    setSavingSale(true)
+    const res = await fetch('/api/flash-sale', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(flashSale),
+    })
+    const data = await res.json().catch(() => ({}))
+    setSavingSale(false)
+    if (res.ok) {
+      showSuccess(
+        flashSale.enabled ? 'Flash Sale Saved & Live' : 'Flash Sale Disabled',
+        flashSale.enabled
+          ? `Campaign "${flashSale.name || 'Flash Sale'}" with ${flashSale.discountValue}${flashSale.discountType === 'percentage' ? '%' : '₹'} discount is saved. Security alert email has been sent to owners.`
+          : 'Flash sale disabled and taken offline. Security alert email sent to owners.'
+      )
+      loadAll()
+    } else {
+      showError('Save Failed', data.error || 'Could not save flash sale campaign')
+    }
+  }
+
   async function signOut() {
     await supabase.auth.signOut()
     router.push('/login')
@@ -376,6 +443,7 @@ export default function AdminPage() {
     ['short_stays', '☀️ Short stays'],
     ...(canManagePricing ? [
       ['pricing', 'Pricing & offers'],
+      ['sales', '⚡ Flash sales'],
       ['advance', 'Advance codes'],
       ['payments', 'Payments'],
       ['content', 'Images & terms']
@@ -495,6 +563,277 @@ export default function AdminPage() {
             </div>
           </section>
         </div>}
+
+        {canManagePricing && tab === 'sales' && (
+          <section className="mt-8 rounded-2xl border border-[#dfe7dc] bg-white p-6 sm:p-8 shadow-sm">
+            <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[#eef2eb] pb-5">
+              <div>
+                <div className="flex items-center gap-2">
+                  <Zap size={20} className="text-amber-600 fill-amber-500" />
+                  <p className="eyebrow text-amber-800">Promotions & Campaigns</p>
+                </div>
+                <h2 className="mt-1 font-serif text-2xl">Scheduled Flash Sales & Seasonal Deals</h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  Launch time-bound promotional sales with live countdown clocks and automatic discounted rates on the customer website.
+                </p>
+              </div>
+
+              <div>
+                {(() => {
+                  if (!flashSale.enabled) {
+                    return <span className="rounded-full bg-slate-100 px-3.5 py-1.5 text-xs font-bold text-slate-600 border border-slate-200">🔴 Inactive / Disabled</span>
+                  }
+                  const now = new Date()
+                  const start = flashSale.startDateTime ? new Date(flashSale.startDateTime) : null
+                  const end = flashSale.endDateTime ? new Date(flashSale.endDateTime) : null
+                  if (start && now < start) {
+                    return <span className="rounded-full bg-amber-50 px-3.5 py-1.5 text-xs font-bold text-amber-700 border border-amber-200">🟡 Scheduled (Starts {start.toLocaleDateString('en-IN')} {start.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })})</span>
+                  }
+                  if (end && now > end) {
+                    return <span className="rounded-full bg-red-50 px-3.5 py-1.5 text-xs font-bold text-red-700 border border-red-200">⚪ Expired (Ended {end.toLocaleDateString('en-IN')})</span>
+                  }
+                  return <span className="rounded-full bg-emerald-50 px-3.5 py-1.5 text-xs font-bold text-emerald-700 border border-emerald-200 animate-pulse">🟢 LIVE NOW ON WEBSITE</span>
+                })()}
+              </div>
+            </div>
+
+            <form onSubmit={saveFlashSale} className="mt-6 space-y-6">
+              <div className="flex items-center justify-between rounded-xl bg-[#f4f7f2] p-4 border border-[#dfe7dc]">
+                <div>
+                  <label htmlFor="sale-toggle" className="text-sm font-bold text-[#173d35] cursor-pointer">
+                    Enable Flash Sale Campaign
+                  </label>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    When active and within the date range, the promotional announcement bar &amp; countdown clock appear across the customer website.
+                  </p>
+                </div>
+                <input
+                  id="sale-toggle"
+                  type="checkbox"
+                  checked={Boolean(flashSale.enabled)}
+                  onChange={e => setFlashSale({ ...flashSale, enabled: e.target.checked })}
+                  className="h-5 w-5 rounded border-slate-300 text-[#173d35] focus:ring-[#315d4c] cursor-pointer"
+                />
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <label className="text-xs font-semibold text-slate-700">
+                  Campaign Title *
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Monsoon Weekend Flash Sale"
+                    value={flashSale.name || ''}
+                    onChange={e => setFlashSale({ ...flashSale, name: e.target.value })}
+                    className="mt-1.5 w-full rounded-xl border border-[#dfe7dc] bg-[#fbfdf9] px-3 py-2 text-sm text-[#173d35]"
+                  />
+                </label>
+
+                <label className="text-xs font-semibold text-slate-700">
+                  Banner Badge Text
+                  <input
+                    type="text"
+                    placeholder="e.g. ⚡ FLASH SALE 25% OFF"
+                    value={flashSale.badgeText || ''}
+                    onChange={e => setFlashSale({ ...flashSale, badgeText: e.target.value })}
+                    className="mt-1.5 w-full rounded-xl border border-[#dfe7dc] bg-[#fbfdf9] px-3 py-2 text-sm text-[#173d35]"
+                  />
+                </label>
+
+                <label className="text-xs font-semibold text-slate-700">
+                  Discount Type
+                  <select
+                    value={flashSale.discountType || 'percentage'}
+                    onChange={e => setFlashSale({ ...flashSale, discountType: e.target.value })}
+                    className="mt-1.5 w-full rounded-xl border border-[#dfe7dc] bg-[#fbfdf9] px-3 py-2 text-sm text-[#173d35]"
+                  >
+                    <option value="percentage">Percentage Discount (%)</option>
+                    <option value="fixed">Fixed Amount Discount (₹)</option>
+                  </select>
+                </label>
+
+                <label className="text-xs font-semibold text-slate-700">
+                  Discount Value ({flashSale.discountType === 'fixed' ? '₹' : '%'}) *
+                  <input
+                    type="number"
+                    min="1"
+                    max={flashSale.discountType === 'percentage' ? '100' : '100000'}
+                    required
+                    placeholder={flashSale.discountType === 'percentage' ? '20' : '2000'}
+                    value={flashSale.discountValue ?? ''}
+                    onChange={e => setFlashSale({ ...flashSale, discountValue: e.target.value })}
+                    className="mt-1.5 w-full rounded-xl border border-[#dfe7dc] bg-[#fbfdf9] px-3 py-2 text-sm text-[#173d35]"
+                  />
+                </label>
+
+                <label className="text-xs font-semibold text-slate-700">
+                  Start Date &amp; Time (IST)
+                  <input
+                    type="datetime-local"
+                    value={flashSale.startDateTime || ''}
+                    onChange={e => setFlashSale({ ...flashSale, startDateTime: e.target.value })}
+                    className="mt-1.5 w-full rounded-xl border border-[#dfe7dc] bg-[#fbfdf9] px-3 py-2 text-sm text-[#173d35]"
+                  />
+                </label>
+
+                <label className="text-xs font-semibold text-slate-700">
+                  End Date &amp; Time (IST)
+                  <input
+                    type="datetime-local"
+                    value={flashSale.endDateTime || ''}
+                    onChange={e => setFlashSale({ ...flashSale, endDateTime: e.target.value })}
+                    className="mt-1.5 w-full rounded-xl border border-[#dfe7dc] bg-[#fbfdf9] px-3 py-2 text-sm text-[#173d35]"
+                  />
+                </label>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-slate-700">
+                  Banner Announcement Message
+                  <textarea
+                    rows={2}
+                    placeholder="e.g. Special limited-time monsoon discount! Book today and get 25% off all stays with complimentary pool access."
+                    value={flashSale.bannerMessage || ''}
+                    onChange={e => setFlashSale({ ...flashSale, bannerMessage: e.target.value })}
+                    className="mt-1.5 w-full rounded-xl border border-[#dfe7dc] bg-[#fbfdf9] px-3 py-2 text-sm text-[#173d35]"
+                  />
+                </label>
+              </div>
+
+              {/* Campaign Poster / Promotional Image (Responsive) */}
+              <div className="rounded-xl border border-[#dfe7dc] bg-[#f9faf6] p-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <label className="text-xs font-bold text-[#173d35]">
+                      Campaign Poster / Banner Image (Responsive)
+                    </label>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Upload an eye-catching promotional image or paste an image URL to feature in the interactive motion carousel on the customer website.
+                    </p>
+                  </div>
+                  <input
+                    ref={bannerFileInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={e => {
+                      const f = e.target.files?.[0]
+                      if (f) uploadBannerImage(f)
+                      e.target.value = ''
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => bannerFileInputRef.current?.click()}
+                    disabled={bannerUploading}
+                    className="button-outline text-xs px-3.5 py-1.5 flex items-center gap-1.5 shrink-0"
+                  >
+                    {bannerUploading ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
+                    {bannerUploading ? 'Uploading…' : 'Upload Poster File'}
+                  </button>
+                </div>
+
+                <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_auto]">
+                  <input
+                    type="url"
+                    placeholder="Or paste image URL (e.g. https://... or /images/...)"
+                    value={flashSale.imageUrl || ''}
+                    onChange={e => setFlashSale({ ...flashSale, imageUrl: e.target.value })}
+                    className="w-full rounded-xl border border-[#dfe7dc] bg-white px-3 py-2 text-xs text-[#173d35]"
+                  />
+                  {flashSale.imageUrl && (
+                    <button
+                      type="button"
+                      onClick={() => setFlashSale({ ...flashSale, imageUrl: '' })}
+                      className="text-xs text-red-600 hover:underline px-2"
+                    >
+                      Remove Poster
+                    </button>
+                  )}
+                </div>
+
+                {flashSale.imageUrl && (
+                  <div className="mt-3 flex items-center gap-4 rounded-xl border border-[#e5ebe1] bg-white p-3">
+                    <img
+                      src={flashSale.imageUrl}
+                      alt="Campaign Banner Preview"
+                      className="h-20 w-32 rounded-lg object-cover border border-slate-200"
+                    />
+                    <div className="text-xs">
+                      <p className="font-semibold text-emerald-800">✓ Poster Loaded &amp; Active</p>
+                      <p className="text-slate-500 text-[11px] truncate max-w-sm mt-0.5">{flashSale.imageUrl}</p>
+                      <span className="inline-block mt-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
+                        Responsive on Mobile &amp; Desktop
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-slate-700 block mb-2">
+                  Applicable Stays &amp; Services
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    ['all', 'All Stays & Services'],
+                    ['Master Bedroom', 'Master Bedroom'],
+                    ['2 BHK Villa', '2 BHK Villa'],
+                    ['4 BHK Villa', '4 BHK Villa'],
+                    ['One Day Tour', 'One Day Tour'],
+                    ['Mini Water Park', 'Mini Water Park'],
+                    ['Wedding Ceremony', 'Wedding / Events'],
+                  ].map(([val, name]) => {
+                    const isSelected = flashSale.applicableServices === 'all'
+                      ? val === 'all'
+                      : (Array.isArray(flashSale.applicableServices) && flashSale.applicableServices.includes(val))
+                    return (
+                      <button
+                        key={val}
+                        type="button"
+                        onClick={() => {
+                          if (val === 'all') {
+                            setFlashSale({ ...flashSale, applicableServices: 'all' })
+                          } else {
+                            let curr = Array.isArray(flashSale.applicableServices) ? [...flashSale.applicableServices] : []
+                            if (curr.includes(val)) {
+                              curr = curr.filter(x => x !== val)
+                              if (!curr.length) curr = 'all'
+                            } else {
+                              curr.push(val)
+                            }
+                            setFlashSale({ ...flashSale, applicableServices: curr })
+                          }
+                        }}
+                        className={`rounded-xl px-3.5 py-1.5 text-xs font-semibold transition border ${
+                          isSelected
+                            ? 'bg-[#173d35] text-white border-[#173d35] shadow-xs'
+                            : 'bg-white text-slate-700 border-slate-200 hover:bg-[#edf1e8]'
+                        }`}
+                      >
+                        {isSelected ? '✓ ' : ''}{name}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-[#eef2eb]">
+                <p className="text-xs text-slate-400">
+                  🛡️ Saving changes dispatches an instant security audit email with before/after diff to all super admins &amp; owners.
+                </p>
+                <button
+                  type="submit"
+                  disabled={savingSale}
+                  className="button-primary flex items-center gap-2"
+                >
+                  {savingSale ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                  {savingSale ? 'Saving Campaign…' : 'Save Flash Sale & Notify Admins'}
+                </button>
+              </div>
+            </form>
+          </section>
+        )}
 
         {canManagePricing && tab === 'advance' && (
           <section className="mt-8 rounded-2xl border border-[#dfe7dc] bg-white p-6 sm:p-8">
@@ -975,11 +1314,11 @@ export default function AdminPage() {
 
         {canManageRoles && tab === 'customers' && (
           <div className="space-y-8">
-            {/* Create New Admin User Form */}
+            {/* Create New Team Member Form */}
             <section className="rounded-2xl border border-[#dfe7dc] bg-white p-6 shadow-sm">
               <div className="flex items-center gap-2"><Plus size={18} className="text-[#173d35]" /><p className="eyebrow">User Management</p></div>
-              <h2 className="mt-2 font-serif text-2xl">Add New Admin or Staff</h2>
-              <p className="mt-1 text-sm text-slate-500">Create a new authenticated account and assign their administrative role directly.</p>
+              <h2 className="mt-2 font-serif text-2xl">Add Staff or Manager</h2>
+              <p className="mt-1 text-sm text-slate-500">Provision authenticated accounts for resort staff or managers. The primary Super Admin account is exclusive.</p>
 
               <form onSubmit={createAdminUser} className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
                 <label className="text-xs font-semibold text-slate-700">
@@ -999,7 +1338,7 @@ export default function AdminPage() {
                   <input
                     type="email"
                     required
-                    placeholder="admin@siddhifarm.com"
+                    placeholder="staff@siddhifarm.com"
                     value={newAdmin.email}
                     onChange={e => setNewAdmin({ ...newAdmin, email: e.target.value })}
                     className="mt-1.5 w-full rounded-xl border border-[#dfe7dc] bg-[#fbfdf9] px-3 py-2 text-sm text-[#173d35]"
@@ -1007,12 +1346,12 @@ export default function AdminPage() {
                 </label>
 
                 <label className="text-xs font-semibold text-slate-700">
-                  Password (min 8 chars) *
+                  Password (10+ chars, 1 uppercase, 1 digit, 1 special) *
                   <input
                     type="password"
                     required
-                    minLength={8}
-                    placeholder="••••••••"
+                    minLength={10}
+                    placeholder="e.g. Secret@2026!"
                     value={newAdmin.password}
                     onChange={e => setNewAdmin({ ...newAdmin, password: e.target.value })}
                     className="mt-1.5 w-full rounded-xl border border-[#dfe7dc] bg-[#fbfdf9] px-3 py-2 text-sm text-[#173d35]"
@@ -1026,9 +1365,8 @@ export default function AdminPage() {
                     onChange={e => setNewAdmin({ ...newAdmin, role: e.target.value })}
                     className="mt-1.5 w-full rounded-xl border border-[#dfe7dc] bg-[#fbfdf9] px-3 py-2 text-sm text-[#173d35]"
                   >
-                    <option value="staff">Staff</option>
-                    <option value="manager">Manager</option>
-                    <option value="super_admin">Super Admin</option>
+                    <option value="staff">Staff (Bookings & Check-ins)</option>
+                    <option value="manager">Manager (Pricing, Content & Coupons)</option>
                   </select>
                 </label>
 
@@ -1039,7 +1377,7 @@ export default function AdminPage() {
                     className="flex h-[42px] w-full items-center justify-center gap-2 rounded-xl bg-[#173d35] px-4 font-semibold text-white shadow hover:bg-[#1f4e44] disabled:opacity-50"
                   >
                     {creatingAdmin ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
-                    {creatingAdmin ? 'Creating…' : 'Add Admin'}
+                    {creatingAdmin ? 'Creating…' : 'Add Team Member'}
                   </button>
                 </div>
               </form>
@@ -1072,6 +1410,7 @@ export default function AdminPage() {
                   <tbody>
                     {customers.map(user => {
                       const isRoot = user.id === rootAdminId
+                      const isSuperAdmin = user.role === 'super_admin'
                       return (
                         <tr className="border-b border-[#eef2eb] transition-colors hover:bg-[#fbfcfb]" key={user.id}>
                           <td className="py-3 font-medium text-slate-900">
@@ -1085,21 +1424,25 @@ export default function AdminPage() {
                           <td className="py-3 text-slate-600">{user.email}</td>
                           <td className="py-3 text-slate-500">{user.phone || '—'}</td>
                           <td className="py-3">
-                            <select
-                              className="m-0 w-auto rounded-lg border border-slate-200 bg-white py-1.5 pl-2.5 pr-8 text-xs font-medium text-slate-800"
-                              value={user.role}
-                              onChange={e => changeRole(user.id, e.target.value)}
-                              disabled={isRoot}
-                            >
-                              <option value="customer">Customer</option>
-                              <option value="staff">Staff</option>
-                              <option value="manager">Manager</option>
-                              <option value="super_admin">Super Admin</option>
-                            </select>
+                            {isSuperAdmin ? (
+                              <span className="inline-flex items-center gap-1 text-xs font-semibold text-[#173d35] bg-[#eef4ec] px-2.5 py-1 rounded-lg">
+                                <ShieldCheck size={13} className="text-[#315d4c]" /> Super Admin (Owner)
+                              </span>
+                            ) : (
+                              <select
+                                className="m-0 w-auto rounded-lg border border-slate-200 bg-white py-1.5 pl-2.5 pr-8 text-xs font-medium text-slate-800"
+                                value={user.role}
+                                onChange={e => changeRole(user.id, e.target.value)}
+                              >
+                                <option value="customer">Customer</option>
+                                <option value="staff">Staff</option>
+                                <option value="manager">Manager</option>
+                              </select>
+                            )}
                           </td>
                           <td className="py-3 text-right">
-                            {isRoot ? (
-                              <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 bg-amber-50 px-2 py-1 rounded-md" title="The primary super admin cannot be modified">
+                            {isRoot || isSuperAdmin ? (
+                              <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 bg-amber-50 px-2 py-1 rounded-md" title="The super admin account cannot be modified">
                                 <ShieldCheck size={13} /> Primary Owner
                               </span>
                             ) : (

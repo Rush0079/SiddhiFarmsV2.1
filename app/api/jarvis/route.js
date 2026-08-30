@@ -1,3 +1,24 @@
+/**
+ * ============================================================================
+ * SIDDHI FARM RESORT - JARVIS/FRIDAY AUTONOMOUS AGENT API ROUTE
+ * ============================================================================
+ * 
+ * DESIGN PATTERNS APPLIED:
+ * 1. Autonomous Agent Tool Dispatcher / Command Pattern:
+ *    Interprets LLM intent into structured executable commands (run_diagnostics, git_status, read_file, patch_file, write_file).
+ * 
+ * 2. Adapter Pattern (Cloud GitHub API vs Local FileSystem):
+ *    Adapts filesystem and repo operations seamlessly between GitHub REST API (in cloud hosting / Vercel)
+ *    and local Node.js fs/child_process (in local development).
+ * 
+ * 3. Strategy Pattern (Multi-Model Resilience):
+ *    Sequential execution fallback across candidate Gemini models with loop-based tool reflection.
+ * 
+ * LOGGING CONVENTION:
+ * [API:JARVIS:<ACTION>] <DETAILS>
+ * ============================================================================
+ */
+
 import { NextResponse } from 'next/server'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import fs from 'fs'
@@ -12,7 +33,11 @@ const GITHUB_REPO = process.env.GITHUB_REPO || 'Rush0079/SiddhiFarmsV2.1'
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN || ''
 const CANDIDATE_MODELS = ['gemini-3.6-flash', 'gemini-3.7-flash', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-flash-latest']
 
-// Helper: Safely resolve local workspace path
+/**
+ * Safely resolves user-provided filepaths within workspace boundaries to prevent traversal attacks.
+ * @param {string} userPath - User-supplied relative path
+ * @returns {string} Fully qualified absolute path
+ */
 function resolveSafePath(userPath = '') {
   const cleaned = userPath.replace(/^[/\\]+/, '')
   const resolved = path.resolve(WORKSPACE_ROOT, cleaned)
@@ -22,7 +47,12 @@ function resolveSafePath(userPath = '') {
   return resolved
 }
 
-// GitHub API Client Helper (for Cloud Mode)
+/**
+ * Executes authenticated REST calls against GitHub REST API (v3).
+ * @param {string} endpoint - API path segment
+ * @param {Object} options - Fetch options
+ * @returns {Promise<Object>} JSON response payload
+ */
 async function githubFetch(endpoint, options = {}) {
   if (!GITHUB_TOKEN) {
     throw new Error('GITHUB_TOKEN not configured. Please add GITHUB_TOKEN in your environment.')
@@ -322,6 +352,11 @@ async function callGemini(genAI, systemPrompt, contents) {
   throw lastError || new Error('All candidate models failed.')
 }
 
+/**
+ * JARVIS / FRIDAY Command Dispatcher Endpoint
+ * @param {Request} req - Incoming request containing { message, pin, persona, conversationHistory }
+ * @returns {Promise<NextResponse>} JSON response with { reply, actions, persona }
+ */
 export async function POST(req) {
   try {
     const body = await req.json()
@@ -330,6 +365,7 @@ export async function POST(req) {
     // Security check: Developer PIN
     const requiredPin = process.env.JARVIS_DEV_PIN || '3000'
     if (pin !== requiredPin) {
+      console.warn('[API:JARVIS:AUTH_FAILED] Unauthorized access attempt with invalid PIN')
       return NextResponse.json({
         error: 'Unauthorized: Invalid Developer Passkey PIN.',
         authRequired: true,
@@ -340,8 +376,11 @@ export async function POST(req) {
       return NextResponse.json({ error: 'Command message is required' }, { status: 400 })
     }
 
+    console.log(`[API:JARVIS:EXECUTE] Persona: ${persona} | Command: "${message.slice(0, 80)}${message.length > 80 ? '...' : ''}"`)
+
     const apiKey = process.env.GEMINI_API_KEY
     if (!apiKey) {
+      console.error('[API:JARVIS:CONFIG_ERROR] GEMINI_API_KEY is missing')
       return NextResponse.json({
         error: 'GEMINI_API_KEY is not configured in server environment.',
       }, { status: 500 })
@@ -416,6 +455,7 @@ Keep spoken replies concise, confident, and direct for live voice discussion mod
         try {
           const parsed = JSON.parse(jsonMatch[1])
           if (parsed.tool) {
+            console.log(`[API:JARVIS:TOOL_INVOKE] Tool: ${parsed.tool}`, parsed.args || {})
             const toolResult = await executeTool(parsed.tool, parsed.args || {})
             actionsTaken.push({
               tool: parsed.tool,
@@ -432,7 +472,7 @@ Keep spoken replies concise, confident, and direct for live voice discussion mod
             continue // Next iteration to let model summarize
           }
         } catch (parseErr) {
-          console.warn('[JARVIS Tool JSON Parse Error]', parseErr)
+          console.warn('[API:JARVIS:TOOL_PARSE_ERROR]', parseErr.message)
         }
       }
 
@@ -445,13 +485,14 @@ Keep spoken replies concise, confident, and direct for live voice discussion mod
       finalReply = `All operations completed successfully, ${persona === 'jarvis' ? 'Sir' : 'Boss'}.`
     }
 
+    console.log(`[API:JARVIS:RESPONSE_READY] Actions executed: ${actionsTaken.length}`)
     return NextResponse.json({
       reply: finalReply,
       actions: actionsTaken,
       persona: persona,
     })
   } catch (err) {
-    console.error('[JARVIS Agent Error]', err)
+    console.error('[API:JARVIS:ERROR]', err?.message || err)
     return NextResponse.json({
       error: err.message || 'Internal agent error',
     }, { status: 500 })
