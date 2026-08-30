@@ -33,6 +33,7 @@ import { normaliseBookingTerms } from '@/lib/booking-terms'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 import { sendAutomatedWhatsAppMessage } from '@/lib/whatsapp'
 import { verifyRecaptcha } from '@/lib/recaptcha'
+import { generateAndSendOTP, verifyOTP } from '@/lib/otp-service'
 
 /**
  * Standard fallback pricing matrix (in INR)
@@ -1188,14 +1189,98 @@ function validatePasswordComplexity(password) {
   return null
 }
 
-    // 13. POST /api/admin/create-user (super_admin only: provision staff & manager accounts)
+    // 13. POST /api/auth/2fa/send (Dispatches 2FA OTP for admin/staff sign-in)
+    if (path[0] === 'auth' && path[1] === '2fa' && path[2] === 'send') {
+      const clientIp = getClientIp(request)
+      const limit = checkRateLimit(clientIp, '2fa_send', 10, 5 * 60 * 1000)
+      if (!limit.allowed) {
+        return NextResponse.json({ error: `Too many verification requests. Please wait ${limit.resetInSeconds}s.` }, { status: 429 })
+      }
+
+      const email = String(body.email || '').trim().toLowerCase()
+      if (!email) return NextResponse.json({ error: 'Email is required' }, { status: 400 })
+
+      const { data: profile } = await admin.from('profiles').select('email, phone, role, full_name').eq('email', email).maybeSingle()
+      const role = profile?.role || 'customer'
+      const isAdminRole = ['staff', 'manager', 'super_admin'].includes(role)
+
+      if (!isAdminRole) {
+        return NextResponse.json({ requires2FA: false, role })
+      }
+
+      const otpRes = await generateAndSendOTP({
+        email: profile.email,
+        phone: profile.phone,
+        purpose: 'admin_login',
+        metadata: { role, full_name: profile.full_name },
+      })
+
+      return NextResponse.json({
+        requires2FA: true,
+        role,
+        maskedEmail: otpRes.maskedEmail,
+        maskedPhone: otpRes.maskedPhone,
+        expiresInSeconds: otpRes.expiresInSeconds,
+      })
+    }
+
+    // 14. POST /api/auth/2fa/verify (Validates 2FA OTP for admin/staff sign-in)
+    if (path[0] === 'auth' && path[1] === '2fa' && path[2] === 'verify') {
+      const clientIp = getClientIp(request)
+      const limit = checkRateLimit(clientIp, '2fa_verify', 15, 5 * 60 * 1000)
+      if (!limit.allowed) {
+        return NextResponse.json({ error: `Too many attempts. Please wait ${limit.resetInSeconds}s.` }, { status: 429 })
+      }
+
+      const email = String(body.email || '').trim().toLowerCase()
+      const otpCode = String(body.otpCode || '').trim()
+
+      const verifyRes = await verifyOTP({ email, otpCode, purpose: 'admin_login' })
+      if (!verifyRes.valid) {
+        return NextResponse.json({ error: verifyRes.reason }, { status: 400 })
+      }
+
+      return NextResponse.json({ ok: true, verified: true })
+    }
+
+    // 15. POST /api/admin/auth-otp/request (Super Admin requests authorization OTP for admin provisioning)
+    if (path[0] === 'admin' && path[1] === 'auth-otp' && path[2] === 'request') {
+      const guard = await requireRole(['super_admin'])
+      if (guard.error) return NextResponse.json({ error: guard.error }, { status: guard.status })
+
+      const { action = 'create_admin', targetEmail, targetRole } = body
+      const otpRes = await generateAndSendOTP({
+        email: guard.user.email,
+        phone: guard.profile?.phone,
+        purpose: 'create_admin',
+        metadata: { targetEmail, targetRole, requestedBy: guard.user.email },
+      })
+
+      return NextResponse.json({
+        ok: true,
+        maskedEmail: otpRes.maskedEmail,
+        maskedPhone: otpRes.maskedPhone,
+        expiresInSeconds: otpRes.expiresInSeconds,
+      })
+    }
+
+    // 16. POST /api/admin/create-user (super_admin only: provision staff & manager accounts with OTP authorization)
     if (path[0] === 'admin' && path[1] === 'create-user') {
       const guard = await requireRole(['super_admin'])
       if (guard.error) return NextResponse.json({ error: guard.error }, { status: guard.status })
 
-      const { name, email, password, role, phone } = body
+      const { name, email, password, role, phone, superAdminOtp } = body
       if (!name || !email || !password)
         return NextResponse.json({ error: 'Name, email and password are required' }, { status: 400 })
+
+      if (!superAdminOtp || String(superAdminOtp).trim().length !== 6) {
+        return NextResponse.json({ error: 'Super Admin 6-digit authorization OTP is required to create a new team account.' }, { status: 400 })
+      }
+
+      const verifyRes = await verifyOTP({ email: guard.user.email, otpCode: superAdminOtp, purpose: 'create_admin' })
+      if (!verifyRes.valid) {
+        return NextResponse.json({ error: `Super Admin Authorization Failed: ${verifyRes.reason}` }, { status: 403 })
+      }
 
       // Enforce strict password complexity: min 10 chars, 1 uppercase, 1 digit, 1 special char
       const pwError = validatePasswordComplexity(password)
@@ -1208,7 +1293,7 @@ function validatePasswordComplexity(password) {
         }, { status: 400 })
       }
 
-      console.log(`[API:ADMIN:CREATE_USER] Provisioning new team user ${email} with role "${role}" by Super Admin ${guard.user.id}`)
+      console.log(`[API:ADMIN:CREATE_USER] Super Admin authorized account creation for ${email} with role "${role}"`)
       const { data: newUser, error: createErr } = await admin.auth.admin.createUser({
         email: email.trim().toLowerCase(),
         password,
@@ -1234,8 +1319,9 @@ function validatePasswordComplexity(password) {
         details: {
           'Full Name': name.trim(),
           'Email': email.trim().toLowerCase(),
-          'Assigned Role': role,
+          'Assigned Role': role.toUpperCase(),
           'Phone': phone?.trim() || '—',
+          'Authorization': 'Verified via Super Admin 2FA OTP',
         },
       }).catch(err => console.error('[ALERT:ERROR]', err))
 
