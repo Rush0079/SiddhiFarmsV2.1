@@ -25,7 +25,7 @@ import { supabaseAdmin } from '@/lib/supabase/admin'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 
 const RESORT_NAME = 'Siddhi Farm Resort'
-const DEFAULT_PHONE = '7083682768'
+const DEFAULT_PHONE = '9552265572'
 const GOOGLE_MAPS_LINK = 'https://maps.app.goo.gl/iBiKXi45sJ99vrV69'
 const CANDIDATE_MODELS = ['gemini-3.6-flash', 'gemini-3.7-flash', 'gemini-2.5-flash', 'gemini-flash-latest']
 
