@@ -845,17 +845,53 @@ export async function POST(request, { params }) {
     if (path[0] === 'pricing') {
       const guard = await requireRole(['manager', 'super_admin'])
       if (guard.error) return NextResponse.json({ error: guard.error }, { status: guard.status })
+
+      // Fetch previous rates to compute exact diff
+      const { data: previousRow } = await admin.from('pricing').select('values').eq('id', 'current').maybeSingle()
+      const prevRates = cleanPricing(previousRow?.values)
       const values = cleanPricing(body)
+
+      const labelMap = {
+        masterBedroom: 'Master Bedroom (Overnight)',
+        villa2BHK: '2 BHK Villa (Overnight)',
+        villa4BHK: '4 BHK Villa (Overnight)',
+        masterBedroomShortStay: 'Master Bedroom (Short Stay)',
+        villa2BHKShortStay: '2 BHK Villa (Short Stay)',
+        villa4BHKShortStay: '4 BHK Villa (Short Stay)',
+        oneDayTour: 'One Day Tour (Per Person)',
+        miniWaterPark: 'Mini Water Park (Per Person)',
+        weddingEvent: 'Wedding Event Package',
+        engagementEvent: 'Engagement Event Package',
+        birthdayEvent: 'Birthday Event Package',
+        getTogetherEvent: 'Get-Together Event Package',
+      }
+
+      const diffs = {}
+      for (const [k, label] of Object.entries(labelMap)) {
+        const oldVal = prevRates[k] !== undefined ? Number(prevRates[k]) : null
+        const newVal = values[k] !== undefined ? Number(values[k]) : null
+        if (oldVal !== newVal) {
+          if (oldVal !== null) {
+            const diffAmount = newVal - oldVal
+            const diffStr = diffAmount > 0 ? `+₹${diffAmount.toLocaleString('en-IN')}` : `-₹${Math.abs(diffAmount).toLocaleString('en-IN')}`
+            diffs[label] = `₹${oldVal.toLocaleString('en-IN')} ➔ ₹${newVal.toLocaleString('en-IN')} (${diffStr})`
+          } else {
+            diffs[label] = `₹${newVal.toLocaleString('en-IN')} (Initial setup)`
+          }
+        }
+      }
+
       const { error } = await admin.from('pricing').upsert({ id: 'current', values, updated_at: new Date().toISOString() })
       if (error) return NextResponse.json({ error: error.message }, { status: 500 })
       console.log(`[API:PRICING:UPDATED] Pricing updated by ${guard.user.id}`)
 
+      const hasDiffs = Object.keys(diffs).length > 0
       sendAdminConfigAlert({
         category: 'Pricing Matrix',
-        action: 'Room & Package Rates Updated',
+        action: hasDiffs ? `Rates Changed on ${Object.keys(diffs).length} item(s)` : 'Pricing Rates Re-saved',
         changedBy: guard.user.email,
         role: guard.user.role || 'manager',
-        details: values,
+        details: hasDiffs ? diffs : { 'Status': 'All prices re-confirmed with no numeric modifications' },
       }).catch(err => console.error('[ALERT:ERROR]', err))
 
       return NextResponse.json(values)
@@ -1191,6 +1227,9 @@ function validatePasswordComplexity(password) {
       const guard = await requireRole(['manager', 'super_admin'])
       if (guard.error) return NextResponse.json({ error: guard.error }, { status: guard.status })
 
+      const { data: prevSaleRow } = await admin.from('settings').select('value').eq('key', 'flash_sale').maybeSingle()
+      const prevSale = prevSaleRow?.value || {}
+
       const saleConfig = {
         enabled: Boolean(body.enabled),
         name: String(body.name || '').trim(),
@@ -1215,21 +1254,37 @@ function validatePasswordComplexity(password) {
 
       console.log(`[API:FLASH_SALE:SAVED] Flash sale updated by ${guard.user.email} (Enabled: ${saleConfig.enabled}, Value: ${saleConfig.discountValue} ${saleConfig.discountType}, Image: ${saleConfig.imageUrl ? 'Yes' : 'No'})`)
 
+      const diffs = {}
+      if (Boolean(prevSale.enabled) !== Boolean(saleConfig.enabled)) {
+        diffs['Campaign Status'] = `${prevSale.enabled ? '🟢 Live/Scheduled' : '🔴 Disabled'} ➔ ${saleConfig.enabled ? '🟢 Activated & Live' : '🔴 Deactivated'}`
+      }
+      if ((prevSale.name || '') !== saleConfig.name) {
+        diffs['Campaign Name'] = `"${prevSale.name || '(None)'}" ➔ "${saleConfig.name || '(None)'}"`
+      }
+      if (Number(prevSale.discountValue) !== saleConfig.discountValue || prevSale.discountType !== saleConfig.discountType) {
+        const oldD = prevSale.discountValue ? (prevSale.discountType === 'fixed' ? `₹${prevSale.discountValue} Flat` : `${prevSale.discountValue}%`) : 'None'
+        const newD = saleConfig.discountValue ? (saleConfig.discountType === 'fixed' ? `₹${saleConfig.discountValue} Flat` : `${saleConfig.discountValue}%`) : 'None'
+        diffs['Discount Offer'] = `${oldD} ➔ ${newD}`
+      }
+      if ((prevSale.startDateTime || '') !== saleConfig.startDateTime || (prevSale.endDateTime || '') !== saleConfig.endDateTime) {
+        diffs['Schedule Window'] = `Starts: ${saleConfig.startDateTime ? new Date(saleConfig.startDateTime).toLocaleString('en-IN') : 'Immediately'} | Ends: ${saleConfig.endDateTime ? new Date(saleConfig.endDateTime).toLocaleString('en-IN') : 'Indefinite'}`
+      }
+      if ((prevSale.imageUrl || '') !== saleConfig.imageUrl) {
+        diffs['Poster Banner'] = saleConfig.imageUrl ? 'Custom Poster Uploaded/Changed' : 'Poster Removed'
+      }
+      if ((prevSale.bannerMessage || '') !== saleConfig.bannerMessage) {
+        diffs['Announcement Text'] = `"${prevSale.bannerMessage || '—'}" ➔ "${saleConfig.bannerMessage || '—'}"`
+      }
+      if (!Object.keys(diffs).length) {
+        diffs['Settings'] = `Campaign "${saleConfig.name}" re-saved with ${saleConfig.discountValue}${saleConfig.discountType === 'percentage' ? '%' : '₹'} discount`
+      }
+
       sendAdminConfigAlert({
         category: 'Flash Sale & Campaigns',
-        action: saleConfig.enabled ? 'Flash Sale Activated / Scheduled' : 'Flash Sale Disabled',
+        action: saleConfig.enabled ? `Flash Sale Updated: "${saleConfig.name || 'Special Offer'}"` : 'Flash Sale Disabled',
         changedBy: guard.user.email,
         role: guard.user.role || 'manager',
-        details: {
-          'Status': saleConfig.enabled ? '🟢 Active / Scheduled' : '🔴 Disabled',
-          'Campaign Title': saleConfig.name || 'Flash Sale',
-          'Offer': saleConfig.discountType === 'percentage' ? `${saleConfig.discountValue}% OFF` : `₹${saleConfig.discountValue} Flat Off`,
-          'Start Time': saleConfig.startDateTime ? new Date(saleConfig.startDateTime).toLocaleString('en-IN') : 'Immediately',
-          'End Time': saleConfig.endDateTime ? new Date(saleConfig.endDateTime).toLocaleString('en-IN') : 'Indefinite',
-          'Applicable Stays': Array.isArray(saleConfig.applicableServices) ? saleConfig.applicableServices.join(', ') : 'All Services',
-          'Banner Poster': saleConfig.imageUrl ? 'Custom Poster Uploaded' : 'Default / None',
-          'Banner Text': saleConfig.bannerMessage || '—',
-        },
+        details: diffs,
       }).catch(err => console.error('[ALERT:ERROR]', err))
 
       return NextResponse.json({ ok: true, sale: saleConfig })
@@ -1358,22 +1413,27 @@ export async function PATCH(request, { params }) {
     if (path[0] === 'coupons' && path[1]) {
       const guard = await requireRole(['manager', 'super_admin'])
       if (guard.error) return NextResponse.json({ error: guard.error }, { status: guard.status })
-      const { error } = await admin.from('coupons').update({ active: Boolean(body.active) }).eq('id', path[1])
+      const couponId = path[1]
+      const active = Boolean(body.active)
+      const { data: cpBefore } = await admin.from('coupons').select('*').eq('id', couponId).single()
+      const { error } = await admin.from('coupons').update({ active }).eq('id', couponId)
       if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-      console.log(`[API:COUPONS:TOGGLE] Coupon ${path[1]} active state set to ${Boolean(body.active)}`)
+      console.log(`[API:COUPONS:TOGGLE] Coupon ${cpBefore?.code || couponId} active state set to ${active}`)
 
       sendAdminConfigAlert({
         category: 'Coupons & Promotions',
-        action: `Coupon Status Changed to ${Boolean(body.active) ? 'Active' : 'Inactive'}`,
+        action: `Coupon Status: "${cpBefore?.code || couponId}" ${active ? 'Activated 🟢' : 'Deactivated 🔴'}`,
         changedBy: guard.user.email,
         role: guard.user.role || 'manager',
         details: {
-          'Coupon ID': path[1],
-          'Status': Boolean(body.active) ? '🟢 Active' : '🔴 Inactive',
+          'Coupon Code': cpBefore?.code || couponId,
+          'Status Change': `${cpBefore?.active ? '🟢 Active' : '🔴 Inactive'} ➔ ${active ? '🟢 Active' : '🔴 Inactive'}`,
+          'Discount Offer': cpBefore ? (cpBefore.type === 'percentage' ? `${cpBefore.value}% OFF` : `₹${cpBefore.value} Flat OFF`) : '—',
+          'Usage Count': `${cpBefore?.used || 0} times used`,
         },
       }).catch(err => console.error('[ALERT:ERROR]', err))
 
-      return NextResponse.json({ id: path[1], active: Boolean(body.active) })
+      return NextResponse.json({ id: couponId, active })
     }
 
     // 3. PATCH /api/admin/customers (Role updates: customer, staff, or manager)
@@ -1385,18 +1445,23 @@ export async function PATCH(request, { params }) {
         return NextResponse.json({ error: 'Invalid role. Roles can only be updated to customer, staff, or manager.' }, { status: 400 })
       const { data: firstAdmin } = await admin.from('profiles').select('id').eq('role', 'super_admin').order('created_at', { ascending: true }).limit(1).single()
       if (firstAdmin?.id === userId) return NextResponse.json({ error: 'The primary super admin account role cannot be changed' }, { status: 403 })
+      
+      const { data: oldProfile } = await admin.from('profiles').select('*').eq('id', userId).single()
+      const oldRole = oldProfile?.role || 'customer'
       const { error } = await admin.from('profiles').update({ role }).eq('id', userId)
       if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-      console.log(`[API:ADMIN:ROLE_CHANGED] User ${userId} updated to role "${role}" by Super Admin ${guard.user.id}`)
+      console.log(`[API:ADMIN:ROLE_CHANGED] User ${oldProfile?.email || userId} updated to role "${role}" by Super Admin ${guard.user.id}`)
 
       sendAdminConfigAlert({
-        category: 'User Management',
-        action: `User Role Changed to "${role}"`,
+        category: 'User Access & Permissions',
+        action: `Role Changed: ${oldProfile?.email || userId}`,
         changedBy: guard.user.email,
         role: 'super_admin',
         details: {
-          'Target User ID': userId,
-          'New Role': role,
+          'Target User Email': oldProfile?.email || userId,
+          'User Name': oldProfile?.full_name || '—',
+          'Role Transition': `${oldRole.toUpperCase()} ➔ ${role.toUpperCase()}`,
+          'Privileges Granted': role === 'manager' ? 'Full operations & pricing management' : (role === 'staff' ? 'Check-ins & manual payments' : 'Standard Guest access'),
         },
       }).catch(err => console.error('[ALERT:ERROR]', err))
 
@@ -1431,16 +1496,22 @@ export async function DELETE(request, { params }) {
       const guard = await requireRole(['manager', 'super_admin'])
       if (guard.error) return NextResponse.json({ error: guard.error }, { status: guard.status })
       const codes = await getAdvanceCodes(admin)
+      const targetCode = codes.find(c => c.id === path[1] || c.code === path[1])
       const nextCodes = codes.filter(c => c.id !== path[1] && c.code !== path[1])
       await saveAdvanceCodes(admin, nextCodes)
-      console.log(`[API:ADVANCE_CODES:DELETED] Advance code ${path[1]} deleted by ${guard.user.id}`)
+      console.log(`[API:ADVANCE_CODES:DELETED] Advance code ${targetCode?.code || path[1]} deleted by ${guard.user.id}`)
 
       sendAdminConfigAlert({
         category: 'Advance Deposit Codes',
-        action: `Advance Code Deleted: ${path[1]}`,
+        action: `Advance Code Deleted: "${targetCode?.code || path[1]}"`,
         changedBy: guard.user.email,
         role: guard.user.role || 'manager',
-        details: { 'Deleted Code ID': path[1] },
+        details: {
+          'Deleted Code': targetCode?.code || path[1],
+          'Deposit Required': targetCode?.depositAmount ? `₹${targetCode.depositAmount}` : '—',
+          'Description': targetCode?.description || 'Custom advance payment voucher',
+          'Status': 'Permanently deleted from system',
+        },
       }).catch(err => console.error('[ALERT:ERROR]', err))
 
       return NextResponse.json({ ok: true, id: path[1] })
@@ -1450,16 +1521,22 @@ export async function DELETE(request, { params }) {
     if (path[0] === 'coupons' && path[1]) {
       const guard = await requireRole(['manager', 'super_admin'])
       if (guard.error) return NextResponse.json({ error: guard.error }, { status: guard.status })
+      const { data: cp } = await admin.from('coupons').select('*').eq('id', path[1]).single()
       const { error } = await admin.from('coupons').delete().eq('id', path[1])
       if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-      console.log(`[API:COUPONS:DELETED] Coupon ${path[1]} deleted by ${guard.user.id}`)
+      console.log(`[API:COUPONS:DELETED] Coupon ${cp?.code || path[1]} deleted by ${guard.user.id}`)
 
       sendAdminConfigAlert({
         category: 'Coupons & Promotions',
-        action: `Coupon Permanently Deleted (ID: ${path[1]})`,
+        action: `Coupon Deleted: "${cp?.code || path[1]}"`,
         changedBy: guard.user.email,
         role: guard.user.role || 'manager',
-        details: { 'Deleted Coupon ID': path[1] },
+        details: {
+          'Deleted Coupon Code': cp?.code || path[1],
+          'Discount Offer': cp ? (cp.type === 'percentage' ? `${cp.value}% OFF` : `₹${cp.value} Flat OFF`) : '—',
+          'Times Used': cp?.used || 0,
+          'Action': 'Permanently removed from active coupons',
+        },
       }).catch(err => console.error('[ALERT:ERROR]', err))
 
       return NextResponse.json({ ok: true, id: path[1] })
@@ -1483,6 +1560,7 @@ export async function DELETE(request, { params }) {
       const { data: firstAdmin } = await admin.from('profiles').select('id').eq('role', 'super_admin').order('created_at', { ascending: true }).limit(1).single()
       if (firstAdmin?.id === targetUserId) return NextResponse.json({ error: 'The primary super admin account cannot be modified or deleted' }, { status: 403 })
 
+      const { data: targetProfile } = await admin.from('profiles').select('*').eq('id', targetUserId).single()
       const url = new URL(request.url)
       const isPermanentDelete = url.searchParams.get('deleteUser') === 'true'
 
@@ -1490,28 +1568,39 @@ export async function DELETE(request, { params }) {
         await admin.from('profiles').delete().eq('id', targetUserId)
         const { error: authErr } = await admin.auth.admin.deleteUser(targetUserId)
         if (authErr) console.warn(`[API:ADMIN:AUTH_DELETE_WARN] User delete warning for ${targetUserId}:`, authErr.message)
-        console.log(`[API:ADMIN:USER_PURGED] User ${targetUserId} permanently deleted by Super Admin ${guard.user.id}`)
+        console.log(`[API:ADMIN:USER_PURGED] User ${targetProfile?.email || targetUserId} permanently deleted by Super Admin ${guard.user.id}`)
 
         sendAdminConfigAlert({
           category: 'User Management',
-          action: `User Account Permanently Deleted`,
+          action: `User Account Purged: ${targetProfile?.email || targetUserId}`,
           changedBy: guard.user.email,
           role: 'super_admin',
-          details: { 'Deleted User ID': targetUserId },
+          details: {
+            'Purged User Email': targetProfile?.email || targetUserId,
+            'User Name': targetProfile?.full_name || '—',
+            'Previous Role': targetProfile?.role?.toUpperCase() || 'CUSTOMER',
+            'Action': 'Permanently deleted from authentication and database',
+          },
         }).catch(err => console.error('[ALERT:ERROR]', err))
 
         return NextResponse.json({ ok: true, id: targetUserId, deleted: true })
       } else {
         const { error } = await admin.from('profiles').update({ role: 'customer' }).eq('id', targetUserId)
         if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-        console.log(`[API:ADMIN:ROLE_REVOKED] User ${targetUserId} demoted to customer role by Super Admin ${guard.user.id}`)
+        console.log(`[API:ADMIN:ROLE_REVOKED] User ${targetProfile?.email || targetUserId} demoted to customer role by Super Admin ${guard.user.id}`)
 
         sendAdminConfigAlert({
           category: 'User Management',
-          action: `User Demoted to Regular Customer`,
+          action: `Staff/Manager Role Revoked: ${targetProfile?.email || targetUserId}`,
           changedBy: guard.user.email,
           role: 'super_admin',
-          details: { 'Demoted User ID': targetUserId },
+          details: {
+            'User Email': targetProfile?.email || targetUserId,
+            'User Name': targetProfile?.full_name || '—',
+            'Previous Role': targetProfile?.role?.toUpperCase() || 'STAFF',
+            'New Role': 'CUSTOMER (Regular Guest)',
+            'Action': 'Administrative privileges revoked',
+          },
         }).catch(err => console.error('[ALERT:ERROR]', err))
 
         return NextResponse.json({ ok: true, id: targetUserId, role: 'customer' })
