@@ -850,8 +850,9 @@ export default function App() {
             </motion.div>
           )}
 
-          <nav className="container flex h-20 sm:h-24 items-center justify-between">
-            <motion.a
+          <nav className="container">
+            <div className="flex h-20 sm:h-24 items-center justify-between">
+              <motion.a
               href="#top"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
