@@ -750,8 +750,9 @@ export default function App() {
   useEffect(() => {
     fetch('/api/pricing').then(r => r.json()).then(setPricing).catch(() => {})
     fetch('/api/images').then(r => r.json()).then(setImages).catch(() => {})
-    fetch('/api/flash-sale').then(r => r.json()).then(d => {
+    fetch(`/api/flash-sale?t=${Date.now()}`, { cache: 'no-store' }).then(r => r.json()).then(d => {
       if (d?.active && d?.sale) setFlashSale(d.sale)
+      else setFlashSale(null)
     }).catch(() => {})
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       setUser(user)
@@ -804,51 +805,52 @@ export default function App() {
     <>
       <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="lazyOnload" />
       <main className="relative">
-        {flashSale && (
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="relative z-30 overflow-hidden bg-gradient-to-r from-amber-600 via-amber-500 to-amber-700 text-amber-950 px-4 py-2.5 text-xs font-medium shadow-lg border-b border-amber-400"
-          >
-            <div className="container relative z-10 flex flex-wrap items-center justify-between gap-2.5">
-              <div className="flex flex-wrap items-center gap-2.5 font-bold tracking-wide">
-                <motion.span
-                  animate={{ scale: [1, 1.06, 1] }}
-                  transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-                  className="rounded-full bg-amber-950 px-3 py-0.5 text-[11px] font-black uppercase text-amber-300 shadow-xs flex items-center gap-1.5"
-                >
-                  <Zap size={12} className="fill-amber-300 text-amber-300" />
-                  {flashSale.badgeText || '⚡ FLASH SALE'}
-                </motion.span>
-                <span className="text-amber-950 font-bold text-sm">
-                  {flashSale.name || 'Special Promotional Offer'}:
-                </span>
-                <span className="text-amber-950/90 font-medium hidden sm:inline">
-                  {flashSale.bannerMessage || (flashSale.discountType === 'percentage' ? `Special ${flashSale.discountValue}% OFF discount applied across all stays!` : `Special ₹${flashSale.discountValue} OFF discount applied across all stays!`)}
-                </span>
+        <header className="absolute left-0 right-0 top-0 z-20 w-full">
+          {flashSale && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4 }}
+              className="relative z-30 overflow-hidden bg-gradient-to-r from-amber-600 via-amber-500 to-amber-700 text-amber-950 px-3 sm:px-4 py-2 sm:py-2.5 text-xs font-medium shadow-lg border-b border-amber-400"
+            >
+              <div className="container relative z-10 flex flex-wrap items-center justify-between gap-2">
+                <div className="flex flex-wrap items-center gap-2 font-bold tracking-wide">
+                  <motion.span
+                    animate={{ scale: [1, 1.06, 1] }}
+                    transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+                    className="rounded-full bg-amber-950 px-2.5 py-0.5 text-[10px] sm:text-[11px] font-black uppercase text-amber-300 shadow-xs flex items-center gap-1 shrink-0"
+                  >
+                    <Zap size={12} className="fill-amber-300 text-amber-300" />
+                    {flashSale.badgeText || '⚡ FLASH SALE'}
+                  </motion.span>
+                  <span className="text-amber-950 font-bold text-xs sm:text-sm">
+                    {flashSale.name || 'Special Promotional Offer'}:
+                  </span>
+                  <span className="text-amber-950/90 font-medium text-xs">
+                    {flashSale.bannerMessage || (flashSale.discountType === 'percentage' ? `Get ${flashSale.discountValue}% OFF across stays!` : `Get ₹${flashSale.discountValue} OFF across stays!`)}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 sm:gap-3 ml-auto sm:ml-0">
+                  {saleTimeRemaining && (
+                    <div className="flex items-center gap-1 rounded-lg bg-amber-950/15 border border-amber-900/20 px-2 py-0.5 font-mono text-[11px] sm:text-xs font-bold text-amber-950">
+                      <Clock size={12} />
+                      <span>{saleTimeRemaining}</span>
+                    </div>
+                  )}
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => setBookingOpen(true)}
+                    className="rounded-full bg-amber-950 px-3 py-1 text-[11px] sm:text-xs font-bold text-amber-200 hover:bg-black transition shadow-sm cursor-pointer shrink-0"
+                  >
+                    Book Now →
+                  </motion.button>
+                </div>
               </div>
-              <div className="flex items-center gap-3">
-                {saleTimeRemaining && (
-                  <div className="flex items-center gap-1.5 rounded-lg bg-amber-950/15 border border-amber-900/20 px-2.5 py-1 font-mono text-xs font-bold text-amber-950">
-                    <Clock size={13} />
-                    <span>Ends in: {saleTimeRemaining}</span>
-                  </div>
-                )}
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => setBookingOpen(true)}
-                  className="rounded-full bg-amber-950 px-3.5 py-1 text-xs font-bold text-amber-200 hover:bg-black transition shadow-sm cursor-pointer"
-                >
-                  Book with Sale Rate →
-                </motion.button>
-              </div>
-            </div>
-          </motion.div>
-        )}
-        <nav className={`absolute left-0 right-0 z-20 ${flashSale ? 'top-10' : 'top-0'}`}>
-          <div className="container flex h-24 items-center justify-between">
+            </motion.div>
+          )}
+
+          <nav className="container flex h-20 sm:h-24 items-center justify-between">
             <motion.a
               href="#top"
               whileHover={{ scale: 1.02 }}
@@ -959,6 +961,7 @@ export default function App() {
             )}
           </AnimatePresence>
         </nav>
+        </header>
 
         {/* Area 1: Hero Section with Ambient Motion Graphics */}
         <section id="top" className="hero flex min-h-[720px] items-end relative overflow-hidden" style={{ backgroundImage: `linear-gradient(90deg, rgba(12,42,34,.92) 0%, rgba(18,57,46,.62) 48%, rgba(16,47,39,.2) 100%), url(${img('homeHero')})` }}>

@@ -472,6 +472,12 @@ export async function GET(request, { params }) {
         sale: isLive ? sale : null,
         config: sale,
         serverTime: now.toISOString(),
+      }, {
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0',
+          'Pragma': 'no-cache',
+          'Expires': '0',
+        },
       })
     }
 
