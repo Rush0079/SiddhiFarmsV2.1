@@ -269,7 +269,7 @@ export default function JarvisHUDPage() {
       setIsAuthenticated(true)
       setAuthError('')
     } else {
-      setAuthError('Please enter a 4-digit PIN (default: 3000)')
+      setAuthError('Please enter your 4-6 digit Developer Passkey PIN')
     }
   }
 
@@ -307,7 +307,7 @@ export default function JarvisHUDPage() {
                 <input
                   type="password"
                   maxLength={6}
-                  placeholder="PIN (Default: 3000)"
+                  placeholder="Enter Passkey PIN"
                   value={enteredPin}
                   onChange={(e) => setEnteredPin(e.target.value)}
                   className="w-full text-center tracking-[0.5em] text-2xl font-mono py-3 rounded-xl bg-black/50 border border-cyan-500/40 text-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-400"

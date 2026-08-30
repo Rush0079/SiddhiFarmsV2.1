@@ -33,7 +33,7 @@ import { normaliseBookingTerms } from '@/lib/booking-terms'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 import { sendAutomatedWhatsAppMessage } from '@/lib/whatsapp'
 import { verifyRecaptcha } from '@/lib/recaptcha'
-import { generateAndSendOTP, verifyOTP } from '@/lib/otp-service'
+import { generateAndSendOTP, verifyOTP, create2FASessionToken, verify2FASessionToken } from '@/lib/otp-service'
 
 /**
  * Standard fallback pricing matrix (in INR)
@@ -314,7 +314,24 @@ export async function GET(request, { params }) {
 
     // 3. GET /api/coupons
     if (path[0] === 'coupons') {
-      console.log('[API:COUPONS:GET] Fetching coupons list')
+      if (path[1] === 'validate') {
+        const clientIp = getClientIp(request)
+        const limit = checkRateLimit(clientIp, 'coupon_validate', 30, 60 * 1000)
+        if (!limit.allowed) {
+          return NextResponse.json({ error: `Too many validation attempts. Please wait ${limit.resetInSeconds}s.` }, { status: 429 })
+        }
+        const url = new URL(request.url)
+        const code = (url.searchParams.get('code') || '').trim().toUpperCase()
+        if (!code) return NextResponse.json({ valid: false })
+        const { data: coupon } = await admin.from('coupons').select('code, value, type, active, usage_limit, used, expires_at, min_amount, max_discount').eq('code', code).maybeSingle()
+        if (!coupon || !coupon.active) return NextResponse.json({ valid: false })
+        if (coupon.usage_limit && coupon.used >= coupon.usage_limit) return NextResponse.json({ valid: false, error: 'Coupon usage limit reached' })
+        if (coupon.expires_at && new Date(coupon.expires_at) < new Date()) return NextResponse.json({ valid: false, error: 'Coupon expired' })
+        return NextResponse.json({ valid: true, coupon: { code: coupon.code, value: coupon.value, type: coupon.type, min_amount: coupon.min_amount, max_discount: coupon.max_discount } })
+      }
+      const guard = await requireRole(['manager', 'super_admin'])
+      if (guard.error) return NextResponse.json({ error: guard.error }, { status: guard.status })
+      console.log(`[API:COUPONS:GET] Admin ${guard.user.id} fetching all coupons`)
       const { data } = await admin.from('coupons').select('*').order('created_at', { ascending: false })
       return NextResponse.json(data || [])
     }
@@ -353,11 +370,14 @@ export async function GET(request, { params }) {
         return NextResponse.json({ error: 'Booking not found' }, { status: 404 })
       }
       const booking = enrichBookingWithAdvanceNotes(rawBooking)
+      // Mask phone number and strip private fields for public invoice view
+      const rawPhone = String(booking.phone || '')
+      const maskedPhone = rawPhone.length > 5 ? `${rawPhone.slice(0, 3)}****${rawPhone.slice(-3)}` : rawPhone
       return NextResponse.json({
         id: booking.id,
         name: booking.name,
         email: booking.email,
-        phone: booking.phone,
+        phone: maskedPhone,
         service: booking.service,
         check_in: booking.check_in,
         check_out: booking.check_out,
@@ -411,7 +431,9 @@ export async function GET(request, { params }) {
 
     // 10. GET /api/admin/summary
     if (path[0] === 'admin' && path[1] === 'summary') {
-      console.log('[API:ADMIN:SUMMARY] Generating operational dashboard metrics')
+      const guard = await requireRole(['staff', 'manager', 'super_admin'])
+      if (guard.error) return NextResponse.json({ error: guard.error }, { status: guard.status })
+      console.log(`[API:ADMIN:SUMMARY] Admin ${guard.user.id} generating operational dashboard metrics`)
       const { data: bookings } = await admin.from('bookings').select('status,amount')
       const { count: activeCoupons } = await admin.from('coupons').select('*', { count: 'exact', head: true }).eq('active', true)
       const list = bookings || []
@@ -1224,7 +1246,7 @@ function validatePasswordComplexity(password) {
       })
     }
 
-    // 14. POST /api/auth/2fa/verify (Validates 2FA OTP for admin/staff sign-in)
+    // 14. POST /api/auth/2fa/verify (Validates 2FA OTP and issues signed 2FA session cookie)
     if (path[0] === 'auth' && path[1] === '2fa' && path[2] === 'verify') {
       const clientIp = getClientIp(request)
       const limit = checkRateLimit(clientIp, '2fa_verify', 15, 5 * 60 * 1000)
@@ -1240,7 +1262,23 @@ function validatePasswordComplexity(password) {
         return NextResponse.json({ error: verifyRes.reason }, { status: 400 })
       }
 
-      return NextResponse.json({ ok: true, verified: true })
+      const { data: profile } = await admin.from('profiles').select('id, email, role').eq('email', email).maybeSingle()
+      const sessionToken = await create2FASessionToken({
+        userId: profile?.id || 'admin',
+        email: profile?.email || email,
+        role: profile?.role || 'staff',
+      })
+
+      const response = NextResponse.json({ ok: true, verified: true })
+      response.cookies.set('siddhi_2fa_session', sessionToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/',
+        maxAge: 12 * 60 * 60, // 12 hours
+      })
+
+      return response
     }
 
     // 15. POST /api/admin/auth-otp/request (Super Admin requests authorization OTP for admin provisioning)

@@ -25,6 +25,9 @@ import fs from 'fs'
 import path from 'path'
 import { exec } from 'child_process'
 import util from 'util'
+import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { supabaseAdmin } from '@/lib/supabase/admin'
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 
 const execPromise = util.promisify(exec)
 const WORKSPACE_ROOT = process.cwd()
@@ -359,13 +362,47 @@ async function callGemini(genAI, systemPrompt, contents) {
  */
 export async function POST(req) {
   try {
+    const clientIp = getClientIp(req)
+    const limit = checkRateLimit(clientIp, 'jarvis_commands', 20, 5 * 60 * 1000)
+    if (!limit.allowed) {
+      return NextResponse.json({ error: `Too many command requests. Please wait ${limit.resetInSeconds}s.` }, { status: 429 })
+    }
+
+    // 1. Verify Super Admin Authentication Session
+    let user = null
+    try {
+      const supabase = await createSupabaseServerClient()
+      const { data } = await supabase.auth.getUser()
+      user = data?.user || null
+    } catch {}
+
+    if (!user) {
+      const authHeader = req.headers.get('authorization') || ''
+      if (authHeader.startsWith('Bearer ')) {
+        const token = authHeader.replace(/^Bearer\s+/i, '').trim()
+        const admin = supabaseAdmin()
+        const { data } = await admin.auth.getUser(token)
+        user = data?.user || null
+      }
+    }
+
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized: Super Admin login required.' }, { status: 401 })
+    }
+
+    const admin = supabaseAdmin()
+    const { data: profile } = await admin.from('profiles').select('role').eq('id', user.id).single()
+    if (!profile || profile.role !== 'super_admin') {
+      return NextResponse.json({ error: 'Forbidden: JARVIS developer agent is exclusive to Super Admins.' }, { status: 403 })
+    }
+
     const body = await req.json()
     const { message, pin, persona = 'friday', conversationHistory = [] } = body
 
-    // Security check: Developer PIN
-    const requiredPin = process.env.JARVIS_DEV_PIN || '3000'
+    // 2. Security check: Developer PIN
+    const requiredPin = process.env.JARVIS_DEV_PIN || '8842'
     if (pin !== requiredPin) {
-      console.warn('[API:JARVIS:AUTH_FAILED] Unauthorized access attempt with invalid PIN')
+      console.warn(`[API:JARVIS:AUTH_FAILED] Unauthorized PIN attempt by ${user.email}`)
       return NextResponse.json({
         error: 'Unauthorized: Invalid Developer Passkey PIN.',
         authRequired: true,
