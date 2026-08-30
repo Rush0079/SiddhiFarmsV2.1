@@ -770,9 +770,17 @@ export default function App() {
 
   // Live Flash Sale Countdown Ticker
   useEffect(() => {
-    if (!flashSale?.endDateTime) return
+    const endTarget = flashSale?.endDateTimeIso || flashSale?.endDateTime
+    if (!endTarget) return
     const updateCountdown = () => {
-      const diff = new Date(flashSale.endDateTime).getTime() - Date.now()
+      let targetTime
+      if (!/([+-]\d{2}:?\d{2}|Z)$/i.test(String(endTarget))) {
+        targetTime = new Date(`${endTarget}:00+05:30`).getTime()
+      } else {
+        targetTime = new Date(endTarget).getTime()
+      }
+      if (isNaN(targetTime)) targetTime = new Date(endTarget).getTime()
+      const diff = targetTime - Date.now()
       if (diff <= 0) {
         setSaleTimeRemaining('Ending soon')
         return

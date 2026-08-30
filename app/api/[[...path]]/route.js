@@ -456,9 +456,23 @@ export async function GET(request, { params }) {
         applicableServices: 'all',
         imageUrl: '',
       }
+
+      function parseIndianDateTime(dtStr) {
+        if (!dtStr) return null
+        const str = String(dtStr).trim()
+        if (!str) return null
+        if (!/([+-]\d{2}:?\d{2}|Z)$/i.test(str)) {
+          const withOffset = str.length === 16 ? `${str}:00+05:30` : `${str}+05:30`
+          const d = new Date(withOffset)
+          if (!isNaN(d.getTime())) return d
+        }
+        const d = new Date(str)
+        return isNaN(d.getTime()) ? null : d
+      }
+
       const now = new Date()
-      const start = sale.startDateTime ? new Date(sale.startDateTime) : null
-      const end = sale.endDateTime ? new Date(sale.endDateTime) : null
+      const start = parseIndianDateTime(sale.startDateTime)
+      const end = parseIndianDateTime(sale.endDateTime)
       const isStartValid = start && !isNaN(start.getTime())
       const isEndValid = end && !isNaN(end.getTime())
       
@@ -466,10 +480,16 @@ export async function GET(request, { params }) {
       const isEnded = isEndValid && now > end
       const isLive = Boolean(sale.enabled) && isStarted && !isEnded
 
-      console.log(`[API:FLASH_SALE:GET] Flash sale query: ${isLive ? 'LIVE NOW' : 'INACTIVE'} (Enabled: ${sale.enabled})`)
+      const enrichedSale = isLive ? {
+        ...sale,
+        startDateTimeIso: start ? start.toISOString() : null,
+        endDateTimeIso: end ? end.toISOString() : null,
+      } : null
+
+      console.log(`[API:FLASH_SALE:GET] Flash sale query: ${isLive ? 'LIVE NOW' : 'INACTIVE'} (Enabled: ${sale.enabled}, ServerUTC: ${now.toISOString()}, StartIST: ${start?.toISOString()})`)
       return NextResponse.json({
         active: isLive,
-        sale: isLive ? sale : null,
+        sale: enrichedSale,
         config: sale,
         serverTime: now.toISOString(),
       }, {
