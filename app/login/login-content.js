@@ -193,7 +193,7 @@ export default function LoginContent() {
           <div>
             <p className="eyebrow text-[#d5b36a]">Siddhi Farm Resort</p>
             <h1 className="mt-4 font-serif text-6xl leading-none">Welcome<br /><em>back.</em></h1>
-            <p className="mt-5 max-w-xs text-sm leading-6 text-white/65">Sign in to manage stays, celebrations and every farm-fresh detail.</p>
+            <p className="mt-5 max-w-xs text-sm leading-6 text-white/65">Experience nature, luxury villas, and peaceful countryside stays.</p>
           </div>
         </div>
         <div className="p-7 sm:p-12">
@@ -205,7 +205,7 @@ export default function LoginContent() {
                 <div className="mb-5 flex h-11 w-11 items-center justify-center rounded-xl bg-[#e3eee1] text-[#315d4c]"><LockKeyhole size={20} /></div>
                 <p className="eyebrow">Siddhi Farm Resort</p>
                 <h2 className="mt-2 font-serif text-4xl text-[#173d35]">Sign in</h2>
-                <p className="mt-3 text-sm leading-6 text-slate-500">Sign in with your credentials. Administrators will receive a 2FA OTP.</p>
+                <p className="mt-3 text-sm leading-6 text-slate-500">Please enter your account details to access your account.</p>
               </div>
 
               {isTimedOut && (
@@ -223,7 +223,7 @@ export default function LoginContent() {
                 <label>Password<input type="password" required minLength={6} placeholder="Enter your password" value={password} onChange={e => setPassword(e.target.value)} /></label>
                 <div className="flex gap-3 rounded-xl bg-[#f0f3ec] p-4 text-xs leading-5 text-[#315d4c]">
                   <ShieldCheck className="mt-0.5 shrink-0" size={16} />
-                  <span>Administrative accounts are protected with 2-Factor Authentication (2FA) via instant email &amp; mobile OTP verification.</span>
+                  <span>Protected by secure encrypted authentication protocols.</span>
                 </div>
                 {error && <p className="text-sm text-red-600 font-medium">{error}</p>}
                 <button className="button-primary w-full" type="submit" disabled={loading || lockoutSeconds > 0}>
@@ -239,16 +239,16 @@ export default function LoginContent() {
             </div>
           ) : (
             <div>
-              {/* Step 2: 2FA OTP Verification */}
+              {/* Step 2: Verification Code */}
               <div className="mb-8">
                 <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-amber-100 text-amber-800">
                   <KeyRound size={22} />
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-bold text-emerald-800">2FA Protected</span>
-                  <p className="eyebrow text-[#315d4c]">Security Verification</p>
+                  <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-bold text-emerald-800">Secure Access</span>
+                  <p className="eyebrow text-[#315d4c]">Verification</p>
                 </div>
-                <h2 className="mt-2 font-serif text-3xl text-[#173d35]">Enter Security Code</h2>
+                <h2 className="mt-2 font-serif text-3xl text-[#173d35]">Enter Verification Code</h2>
                 <p className="mt-2 text-sm leading-relaxed text-slate-600">
                   We sent a 6-digit verification code to your registered contacts:
                 </p>
