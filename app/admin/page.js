@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic'
 import { useEffect, useRef, useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, Check, Clock3, Edit3, Image as ImageIcon, LayoutDashboard, LogOut, Percent, Plus, QrCode, RotateCcw, Save, ScrollText, ShieldCheck, Trash2, Upload, Users, Loader2, X, FileText, Share2, Printer, Zap, KeyRound, Mail, Smartphone, RefreshCw, TrendingUp, PieChart as PieIcon, Activity, Sparkles, ChevronRight } from 'lucide-react'
-import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid, PieChart, Pie, Cell } from 'recharts'
+import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid, PieChart, Pie, Cell, Sector } from 'recharts'
 import { motion } from 'framer-motion'
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser'
 import { IMAGE_SECTIONS } from '@/lib/siteImages'
@@ -99,6 +99,8 @@ export default function AdminPage() {
     return data
   }, [bookings])
 
+  const [activePieIndex, setActivePieIndex] = useState(null)
+
   const statusDistribution = useMemo(() => {
     const confirmed = bookings.filter(b => b.paid || b.status === 'confirmed').length
     const pending = bookings.filter(b => !b.paid && b.status !== 'cancelled').length
@@ -109,6 +111,29 @@ export default function AdminPage() {
       { name: 'Cancelled', value: cancelled, color: '#ef4444' },
     ]
   }, [bookings, summary])
+
+  const renderActiveShape = (props) => {
+    const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill } = props
+    return (
+      <g>
+        <Sector
+          cx={cx}
+          cy={cy}
+          innerRadius={innerRadius - 3}
+          outerRadius={outerRadius + 8}
+          startAngle={startAngle}
+          endAngle={endAngle}
+          fill={fill}
+          style={{
+            filter: 'drop-shadow(0px 6px 14px rgba(23, 61, 53, 0.35))',
+            cursor: 'pointer',
+            outline: 'none',
+            transition: 'all 0.3s ease'
+          }}
+        />
+      </g>
+    )
+  }
 
   useEffect(() => {
     if (!authModal?.resendCooldown || authModal.resendCooldown <= 0) return
@@ -688,24 +713,55 @@ export default function AdminPage() {
                           cx="50%"
                           cy="50%"
                           innerRadius={58}
-                          outerRadius={82}
-                          paddingAngle={5}
+                          outerRadius={80}
+                          paddingAngle={6}
                           dataKey="value"
+                          activeIndex={activePieIndex !== null ? activePieIndex : undefined}
+                          activeShape={renderActiveShape}
+                          onMouseEnter={(_, index) => setActivePieIndex(index)}
+                          onMouseLeave={() => setActivePieIndex(null)}
+                          onClick={(_, index) => setActivePieIndex(prev => prev === index ? null : index)}
+                          animationDuration={800}
+                          animationEasing="ease-out"
                         >
                           {statusDistribution.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.color} />
+                            <Cell
+                              key={`cell-${index}`}
+                              fill={entry.color}
+                              className="transition-all duration-300 focus:outline-none"
+                              style={{ outline: 'none', cursor: 'pointer' }}
+                            />
                           ))}
                         </Pie>
-                        <Tooltip
-                          formatter={(val, name) => [`${val} requests`, name]}
-                          contentStyle={{ backgroundColor: '#173d35', borderRadius: '12px', border: 'none', color: '#fff' }}
-                        />
                       </PieChart>
                     </ResponsiveContainer>
                   )}
-                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                    <span className="text-2xl font-bold font-serif text-[#173d35]">{bookings.length}</span>
-                    <span className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Bookings</span>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none">
+                    {activePieIndex !== null && statusDistribution[activePieIndex] ? (
+                      <motion.div
+                        key={activePieIndex}
+                        initial={{ scale: 0.82, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        transition={{ duration: 0.2 }}
+                        className="flex flex-col items-center text-center px-2"
+                      >
+                        <span className="text-2xl font-bold font-serif leading-none" style={{ color: statusDistribution[activePieIndex].color }}>
+                          {statusDistribution[activePieIndex].value}
+                        </span>
+                        <span className="text-[11px] font-bold uppercase tracking-wider mt-1" style={{ color: statusDistribution[activePieIndex].color }}>
+                          {statusDistribution[activePieIndex].name}
+                        </span>
+                        <span className="text-[10px] text-slate-400 font-medium">
+                          {bookings.length > 0 ? `${Math.round((statusDistribution[activePieIndex].value / bookings.length) * 100)}% of total` : ''}
+                        </span>
+                      </motion.div>
+                    ) : (
+                      <div className="flex flex-col items-center text-center">
+                        <span className="text-2xl font-bold font-serif text-[#173d35] leading-none">{bookings.length}</span>
+                        <span className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold mt-1">Total Bookings</span>
+                        <span className="text-[9px] text-emerald-800/60 font-medium mt-0.5">Tap slice to view</span>
+                      </div>
+                    )}
                   </div>
                 </div>
 
