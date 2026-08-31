@@ -721,15 +721,90 @@ export default function AdminPage() {
               </div>
             </div>
 
-            {/* Quick Operations Overview Cards */}
-            <div className="rounded-2xl border border-[#dfe7dc] bg-white p-6 sm:p-8">
-              <p className="eyebrow">Siddhi Farm Resort</p>
-              <h2 className="mt-2 font-serif text-3xl">Operations Command Center</h2>
-              <p className="mt-3 max-w-3xl leading-7 text-slate-600">This dashboard keeps the resort website in sync with your daily operations: guests discover stays and experiences, submit a booking request, accept your terms, and continue to payment. Your team can then manage every step without leaving the dashboard.</p>
-              <div className="mt-7 grid gap-4 md:grid-cols-3">
-                <div className="stat-card-motion rounded-xl bg-[#f3f5ef] p-5"><p className="text-sm font-semibold text-[#173d35]">Guest journey</p><p className="mt-2 text-sm leading-6 text-slate-600">Booking request → terms email → payment → confirmation and invoice.</p></div>
-                <div className="stat-card-motion rounded-xl bg-[#f3f5ef] p-5"><p className="text-sm font-semibold text-[#173d35]">Content control</p><p className="mt-2 text-sm leading-6 text-slate-600">Update resort imagery and booking terms from one managed space.</p></div>
-                <div className="stat-card-motion rounded-xl bg-[#f3f5ef] p-5"><p className="text-sm font-semibold text-[#173d35]">Daily workflow</p><p className="mt-2 text-sm leading-6 text-slate-600">Review requests, set arrival times, verify payments, and keep availability accurate.</p></div>
+            {/* Interactive Operations Launchpad Cards */}
+            <div className="grid gap-4 sm:grid-cols-3">
+              <motion.div
+                whileHover={{ y: -4, scale: 1.01 }}
+                className="stat-card-motion rounded-2xl border border-[#dfe7dc] bg-gradient-to-br from-white to-[#fbfcf8] p-5 shadow-xs"
+              >
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-100 text-amber-800 mb-3">
+                  <Zap size={20} />
+                </div>
+                <h4 className="font-serif text-lg font-bold text-[#173d35]">Flash Sale Engine</h4>
+                <p className="mt-1 text-xs text-slate-500 leading-relaxed">
+                  Launch seasonal promotional discounts with countdown clocks on the live website.
+                </p>
+                <button
+                  onClick={() => setTab('sales')}
+                  className="mt-4 flex items-center gap-1 text-xs font-bold text-amber-800 hover:text-amber-950"
+                >
+                  Manage Flash Sales <ChevronRight size={14} />
+                </button>
+              </motion.div>
+
+              <motion.div
+                whileHover={{ y: -4, scale: 1.01 }}
+                className="stat-card-motion rounded-2xl border border-[#dfe7dc] bg-gradient-to-br from-white to-[#fbfcf8] p-5 shadow-xs"
+              >
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 text-emerald-800 mb-3">
+                  <Clock3 size={20} />
+                </div>
+                <h4 className="font-serif text-lg font-bold text-[#173d35]">Short Stays &amp; Day Use</h4>
+                <p className="mt-1 text-xs text-slate-500 leading-relaxed">
+                  Configure custom daytime hours pricing matrix and view short-stay reservations.
+                </p>
+                <button
+                  onClick={() => setTab('short_stays')}
+                  className="mt-4 flex items-center gap-1 text-xs font-bold text-emerald-800 hover:text-emerald-950"
+                >
+                  Configure Short Stays <ChevronRight size={14} />
+                </button>
+              </motion.div>
+
+              <motion.div
+                whileHover={{ y: -4, scale: 1.01 }}
+                className="stat-card-motion rounded-2xl border border-[#dfe7dc] bg-gradient-to-br from-white to-[#fbfcf8] p-5 shadow-xs"
+              >
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-100 text-sky-800 mb-3">
+                  <ShieldCheck size={20} />
+                </div>
+                <h4 className="font-serif text-lg font-bold text-[#173d35]">Staff &amp; 2FA Security</h4>
+                <p className="mt-1 text-xs text-slate-500 leading-relaxed">
+                  Super Admin protected 2FA OTP verification and staff access privileges.
+                </p>
+                <button
+                  onClick={() => setTab(canManageRoles ? 'customers' : 'overview')}
+                  className="mt-4 flex items-center gap-1 text-xs font-bold text-sky-800 hover:text-sky-950"
+                >
+                  {canManageRoles ? 'Manage Team Access' : 'Security Active'} <ChevronRight size={14} />
+                </button>
+              </motion.div>
+            </div>
+
+            {/* Live Activity Stream */}
+            <div className="rounded-2xl border border-[#dfe7dc] bg-white p-6 sm:p-8 shadow-xs">
+              <div className="flex items-center justify-between border-b border-[#eef2eb] pb-4 mb-4">
+                <div className="flex items-center gap-2">
+                  <Activity size={18} className="text-emerald-700" />
+                  <h3 className="font-serif text-xl font-bold text-[#173d35]">Recent Reservation Activity</h3>
+                </div>
+                <span className="text-xs text-slate-500 font-medium">{bookings.length} Total Registered</span>
+              </div>
+              <div className="divide-y divide-[#f0f4ee]">
+                {bookings.slice(0, 5).map(b => (
+                  <div key={b.id} className="table-row-motion flex flex-wrap items-center justify-between gap-3 py-3 rounded-lg px-2">
+                    <div>
+                      <p className="text-sm font-bold text-[#173d35]">{b.name || 'Guest'}</p>
+                      <p className="text-xs text-slate-500">{b.service || 'Resort Stay'} · {b.checkIn ? new Date(b.checkIn).toLocaleDateString('en-IN') : 'Upcoming'}</p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold ${b.paid ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>
+                        {b.paid ? '✓ Confirmed & Paid' : '⏳ Pending Payment'}
+                      </span>
+                      <strong className="text-sm font-mono text-[#173d35]">₹{Number(b.total_amount || b.amount || 0).toLocaleString('en-IN')}</strong>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
