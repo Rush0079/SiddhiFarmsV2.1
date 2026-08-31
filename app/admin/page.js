@@ -2,9 +2,11 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Check, Clock3, Edit3, Image as ImageIcon, LayoutDashboard, LogOut, Percent, Plus, QrCode, RotateCcw, Save, ScrollText, ShieldCheck, Trash2, Upload, Users, Loader2, X, FileText, Share2, Printer, Zap, KeyRound, Mail, Smartphone, RefreshCw } from 'lucide-react'
+import { ArrowLeft, Check, Clock3, Edit3, Image as ImageIcon, LayoutDashboard, LogOut, Percent, Plus, QrCode, RotateCcw, Save, ScrollText, ShieldCheck, Trash2, Upload, Users, Loader2, X, FileText, Share2, Printer, Zap, KeyRound, Mail, Smartphone, RefreshCw, TrendingUp, PieChart as PieIcon, Activity, Sparkles, ChevronRight } from 'lucide-react'
+import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid, PieChart, Pie, Cell } from 'recharts'
+import { motion } from 'framer-motion'
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser'
 import { IMAGE_SECTIONS } from '@/lib/siteImages'
 import { showSuccess, showError, showAlert, showConfirm, showToast } from '@/lib/swal'
@@ -77,6 +79,36 @@ export default function AdminPage() {
   const [savingSale, setSavingSale] = useState(false)
   const [bannerUploading, setBannerUploading] = useState(false)
   const bannerFileInputRef = useRef(null)
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  const revenueChartData = useMemo(() => {
+    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+    const data = days.map(d => ({ name: d, revenue: 0, bookings: 0 }))
+    bookings.forEach((b) => {
+      const date = new Date(b.created_at || b.checkIn || Date.now())
+      const dayIdx = (date.getDay() + 6) % 7
+      if (data[dayIdx]) {
+        data[dayIdx].revenue += Number(b.total_amount || b.amount || 0)
+        data[dayIdx].bookings += 1
+      }
+    })
+    return data
+  }, [bookings])
+
+  const statusDistribution = useMemo(() => {
+    const confirmed = bookings.filter(b => b.paid || b.status === 'confirmed').length
+    const pending = bookings.filter(b => !b.paid && b.status !== 'cancelled').length
+    const cancelled = bookings.filter(b => b.status === 'cancelled').length
+    return [
+      { name: 'Confirmed', value: confirmed || (summary.confirmed || 0), color: '#315d4c' },
+      { name: 'Pending', value: pending || (summary.pending || 0), color: '#d5b36a' },
+      { name: 'Cancelled', value: cancelled, color: '#ef4444' },
+    ]
+  }, [bookings, summary])
 
   useEffect(() => {
     if (!authModal?.resendCooldown || authModal.resendCooldown <= 0) return
@@ -585,16 +617,122 @@ export default function AdminPage() {
         </nav>
 
         {tab === 'overview' && (
-          <section className="mt-8 rounded-2xl border border-[#dfe7dc] bg-white p-6 sm:p-8">
-            <p className="eyebrow">Siddhi Farm Resort</p>
-            <h2 className="mt-2 font-serif text-3xl">Your booking operations, in one place.</h2>
-            <p className="mt-3 max-w-3xl leading-7 text-slate-600">This dashboard keeps the resort website in sync with your daily operations: guests discover stays and experiences, submit a booking request, accept your terms, and continue to payment. Your team can then manage every step without leaving the dashboard.</p>
-            <div className="mt-7 grid gap-4 md:grid-cols-3">
-              <div className="rounded-xl bg-[#f3f5ef] p-5"><p className="text-sm font-semibold text-[#173d35]">Guest journey</p><p className="mt-2 text-sm leading-6 text-slate-600">Booking request → terms email → payment → confirmation and invoice.</p></div>
-              <div className="rounded-xl bg-[#f3f5ef] p-5"><p className="text-sm font-semibold text-[#173d35]">Content control</p><p className="mt-2 text-sm leading-6 text-slate-600">Update resort imagery and booking terms from one managed space.</p></div>
-              <div className="rounded-xl bg-[#f3f5ef] p-5"><p className="text-sm font-semibold text-[#173d35]">Daily workflow</p><p className="mt-2 text-sm leading-6 text-slate-600">Review requests, set arrival times, verify payments, and keep availability accurate.</p></div>
+          <div className="mt-8 space-y-8">
+            {/* Visual Analytics & Charts */}
+            <div className="grid gap-6 lg:grid-cols-[1.5fr_1fr]">
+              {/* Revenue & Booking Velocity Curve */}
+              <div className="stat-card-motion rounded-3xl border border-[#dfe7dc] bg-white p-6 sm:p-7 shadow-xs">
+                <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <TrendingUp size={18} className="text-emerald-700" />
+                      <p className="eyebrow text-emerald-800">Financial Velocity</p>
+                    </div>
+                    <h3 className="font-serif text-xl sm:text-2xl text-[#173d35] mt-1 font-bold">Weekly Revenue Velocity</h3>
+                  </div>
+                  <div className="rounded-full bg-[#f3f5ef] px-3.5 py-1 text-xs font-bold text-emerald-900 border border-[#dfe7dc]">
+                    7-Day Trajectory
+                  </div>
+                </div>
+
+                <div className="h-64 sm:h-72 w-full">
+                  {mounted && (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={revenueChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                        <defs>
+                          <linearGradient id="emeraldGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#173d35" stopOpacity={0.4} />
+                            <stop offset="95%" stopColor="#173d35" stopOpacity={0.0} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f4ee" />
+                        <XAxis dataKey="name" stroke="#8ca392" fontSize={11} tickLine={false} />
+                        <YAxis stroke="#8ca392" fontSize={11} tickLine={false} />
+                        <Tooltip
+                          content={({ active, payload, label }) => {
+                            if (active && payload && payload.length) {
+                              return (
+                                <div className="rounded-xl border border-[#dfe7dc] bg-[#173d35] p-3 text-white shadow-xl">
+                                  <p className="text-xs font-bold text-emerald-300">{label}</p>
+                                  <p className="text-sm font-semibold mt-1">₹{Number(payload[0]?.value || 0).toLocaleString('en-IN')}</p>
+                                  <p className="text-[11px] text-emerald-200/70">{payload[0]?.payload?.bookings || 1} booking(s)</p>
+                                </div>
+                              )
+                            }
+                            return null
+                          }}
+                        />
+                        <Area type="monotone" dataKey="revenue" stroke="#173d35" strokeWidth={3} fillOpacity={1} fill="url(#emeraldGradient)" />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  )}
+                </div>
+              </div>
+
+              {/* Status Distribution Donut Chart */}
+              <div className="stat-card-motion rounded-3xl border border-[#dfe7dc] bg-white p-6 sm:p-7 shadow-xs flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <PieIcon size={18} className="text-emerald-700" />
+                    <p className="eyebrow text-emerald-800">Booking Health Ratio</p>
+                  </div>
+                  <h3 className="font-serif text-xl text-[#173d35] mt-1 font-bold">Payment &amp; Status Mix</h3>
+                </div>
+
+                <div className="relative h-56 w-full flex items-center justify-center my-2">
+                  {mounted && (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={statusDistribution}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={58}
+                          outerRadius={82}
+                          paddingAngle={5}
+                          dataKey="value"
+                        >
+                          {statusDistribution.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip
+                          formatter={(val, name) => [`${val} requests`, name]}
+                          contentStyle={{ backgroundColor: '#173d35', borderRadius: '12px', border: 'none', color: '#fff' }}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  )}
+                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                    <span className="text-2xl font-bold font-serif text-[#173d35]">{bookings.length}</span>
+                    <span className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Bookings</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2 pt-2 border-t border-slate-100">
+                  {statusDistribution.map(item => (
+                    <div key={item.name} className="flex flex-col items-center text-xs text-slate-600">
+                      <span className="h-2 w-2 rounded-full mb-1" style={{ backgroundColor: item.color }} />
+                      <span className="text-[11px] font-medium">{item.name}</span>
+                      <strong className="text-slate-800 font-mono text-sm">{item.value}</strong>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
-          </section>
+
+            {/* Quick Operations Overview Cards */}
+            <div className="rounded-2xl border border-[#dfe7dc] bg-white p-6 sm:p-8">
+              <p className="eyebrow">Siddhi Farm Resort</p>
+              <h2 className="mt-2 font-serif text-3xl">Operations Command Center</h2>
+              <p className="mt-3 max-w-3xl leading-7 text-slate-600">This dashboard keeps the resort website in sync with your daily operations: guests discover stays and experiences, submit a booking request, accept your terms, and continue to payment. Your team can then manage every step without leaving the dashboard.</p>
+              <div className="mt-7 grid gap-4 md:grid-cols-3">
+                <div className="stat-card-motion rounded-xl bg-[#f3f5ef] p-5"><p className="text-sm font-semibold text-[#173d35]">Guest journey</p><p className="mt-2 text-sm leading-6 text-slate-600">Booking request → terms email → payment → confirmation and invoice.</p></div>
+                <div className="stat-card-motion rounded-xl bg-[#f3f5ef] p-5"><p className="text-sm font-semibold text-[#173d35]">Content control</p><p className="mt-2 text-sm leading-6 text-slate-600">Update resort imagery and booking terms from one managed space.</p></div>
+                <div className="stat-card-motion rounded-xl bg-[#f3f5ef] p-5"><p className="text-sm font-semibold text-[#173d35]">Daily workflow</p><p className="mt-2 text-sm leading-6 text-slate-600">Review requests, set arrival times, verify payments, and keep availability accurate.</p></div>
+              </div>
+            </div>
+          </div>
         )}
 
         {tab === 'pricing' && <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_1.25fr]">
