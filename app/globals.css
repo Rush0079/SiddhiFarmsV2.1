@@ -277,3 +277,21 @@
 .experience-card-motion:hover img {
   transform: scale(1.06);
 }
+
+/* Hide Vercel Preview Toolbar / Live Feedback Widget */
+vercel-toolbar,
+vercel-live-feedback,
+vercel-live-feedback-host,
+#vercel-toolbar,
+[data-vercel-toolbar],
+[data-theme-switcher],
+.__vercel-feedback-toolbar,
+div:has(> vercel-live-feedback) {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  opacity: 0 !important;
+  height: 0 !important;
+  width: 0 !important;
+  overflow: hidden !important;
+}
