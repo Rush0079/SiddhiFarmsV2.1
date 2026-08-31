@@ -6,6 +6,7 @@ import { ArrowLeft, ArrowRight, LockKeyhole, ShieldCheck, Loader2, Clock, Smartp
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser'
 import { siteImage } from '@/lib/siteImages'
 import { executeRecaptcha } from '@/lib/recaptcha-client'
+import { LuxuryOverlayLoader } from '@/components/luxury-loader'
 
 export default function LoginContent() {
   const router = useRouter()
@@ -25,6 +26,7 @@ export default function LoginContent() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [verifyingOtp, setVerifyingOtp] = useState(false)
+  const [redirecting, setRedirecting] = useState(false)
   const [resendingOtp, setResendingOtp] = useState(false)
   const [images, setImages] = useState({})
   const [failedAttempts, setFailedAttempts] = useState(0)
@@ -150,11 +152,13 @@ export default function LoginContent() {
         throw new Error(data.error || 'Verification code failed. Please check and try again.')
       }
 
-      // Verification successful: redirect to admin dashboard
+      // Verification successful: trigger luxury redirecting loader & navigate
+      setRedirecting(true)
       router.push(next.startsWith('/admin') ? next : '/admin')
       router.refresh()
     } catch (err) {
       setError(err.message || 'Verification failed. Please try again.')
+      setRedirecting(false)
     } finally {
       setVerifyingOtp(false)
     }
@@ -325,6 +329,14 @@ export default function LoginContent() {
           )}
         </div>
       </div>
+
+      {redirecting && (
+        <LuxuryOverlayLoader
+          title="Staff 2FA Verified"
+          subtitle="Launching Admin Operations Center..."
+          progressMessage="Securing session & loading live resort metrics"
+        />
+      )}
     </main>
   )
 }

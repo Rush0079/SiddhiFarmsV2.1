@@ -12,6 +12,7 @@ import { IMAGE_SECTIONS } from '@/lib/siteImages'
 import { showSuccess, showError, showAlert, showConfirm, showToast } from '@/lib/swal'
 import { getWhatsAppShareUrl } from '@/lib/whatsapp'
 import SiddhiLogo from '@/components/siddhi-logo'
+import { LuxuryPageLoader } from '@/components/luxury-loader'
 
 const labels = {
   masterBedroom: 'Master bedroom (Overnight)',
@@ -570,7 +571,14 @@ export default function AdminPage() {
     router.refresh()
   }
 
-  if (!profile) return <div className="flex min-h-screen items-center justify-center text-[#173d35]"><Loader2 className="animate-spin" /></div>
+  if (!profile) {
+    return (
+      <LuxuryPageLoader
+        title="Siddhi Admin Command Center"
+        subtitle="Connecting to secure resort database & live analytics..."
+      />
+    )
+  }
 
   const canManagePricing = ['manager', 'super_admin'].includes(profile.role)
   const canDelete = ['manager', 'super_admin'].includes(profile.role)

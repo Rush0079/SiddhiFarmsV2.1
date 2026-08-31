@@ -11,6 +11,7 @@ import BookingTerms from '@/components/booking-terms'
 import { getWhatsAppShareUrl } from '@/lib/whatsapp'
 import { executeRecaptcha } from '@/lib/recaptcha-client'
 import SiddhiLogo from '@/components/siddhi-logo'
+import { LuxuryOverlayLoader } from '@/components/luxury-loader'
 
 const experiences = [
   ['farm-stays', 'Farm stays', 'Wake up to birdsong in our spacious master bedrooms and private villas.', 'masterBedroom', 'per night'],
@@ -668,6 +669,22 @@ function BookingPanel({ pricing, user, onClose, flashSale }) {
         )}
         </div>
       </div>
+
+      {status === 'booking' && (
+        <LuxuryOverlayLoader
+          title="Securing Your Reservation"
+          subtitle="Verifying suite availability & preparing terms..."
+          progressMessage="Reserving dates and computing booking deposit"
+        />
+      )}
+
+      {status === 'paying' && (
+        <LuxuryOverlayLoader
+          title="Preparing Secure Checkout"
+          subtitle="Connecting to encrypted payment gateway..."
+          progressMessage="Generating cryptographic Razorpay order ID"
+        />
+      )}
     </div>
   )
 }

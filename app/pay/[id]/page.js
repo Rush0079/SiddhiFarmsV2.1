@@ -8,6 +8,7 @@ import Script from 'next/script'
 import { ArrowLeft, Check, CreditCard, Loader2, MapPin, Phone, ShieldCheck, Sparkles, Clock, AlertCircle, Printer, Share2 } from 'lucide-react'
 import UpiPayment from '@/components/upi-payment'
 import { getWhatsAppShareUrl } from '@/lib/whatsapp'
+import { LuxuryPageLoader, LuxuryOverlayLoader } from '@/components/luxury-loader'
 
 export default function BalancePaymentPage({ params }) {
   const { id } = use(params)
@@ -90,12 +91,10 @@ export default function BalancePaymentPage({ params }) {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#f3f5ef] text-[#173d35]">
-        <div className="flex flex-col items-center gap-3">
-          <Loader2 className="animate-spin text-[#315d4c]" size={32} />
-          <p className="text-sm font-medium text-slate-600">Loading booking invoice…</p>
-        </div>
-      </div>
+      <LuxuryPageLoader
+        title="Siddhi Invoice & Settlement"
+        subtitle="Retrieving reservation details & balance amount..."
+      />
     )
   }
 
@@ -259,6 +258,14 @@ export default function BalancePaymentPage({ params }) {
             </div>
           </div>
         </div>
+
+        {status === 'paying' && (
+          <LuxuryOverlayLoader
+            title="Initializing Balance Payment"
+            subtitle="Connecting to secure payment gateway..."
+            progressMessage="Generating cryptographic order with Razorpay"
+          />
+        )}
       </main>
     </>
   )
