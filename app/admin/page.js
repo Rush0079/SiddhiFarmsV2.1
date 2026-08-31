@@ -557,14 +557,17 @@ export default function AdminPage() {
             <h1 className="section-title mt-2 text-4xl">Good day, {profile.full_name || 'team'}.</h1>
             <p className="mt-3 text-sm text-slate-500">Manage live resort pricing, bookings, coupons and team access.</p>
           </div>
-          <div className="flex items-center gap-2 rounded-full bg-[#e3eee1] px-4 py-2 text-xs text-[#315d4c]"><ShieldCheck size={15} /> Verified Staff Portal</div>
+          <div className="flex items-center gap-2 rounded-full bg-[#e3eee1] px-4 py-2 text-xs font-semibold text-[#315d4c] shadow-xs">
+            <span className="radar-dot" />
+            <ShieldCheck size={15} /> Verified Staff Portal
+          </div>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           {[['Bookings', summary.bookings || 0], ['Pending', summary.pending || 0], ['Confirmed', summary.confirmed || 0], ['Revenue', `₹${(summary.revenue || 0).toLocaleString('en-IN')}`], ['Active coupons', summary.activeCoupons || 0]].map(([title, value]) => (
-            <div className="rounded-2xl border border-[#dfe7dc] bg-white p-5" key={title}>
-              <p className="text-xs text-slate-500">{title}</p>
-              <p className="mt-3 font-serif text-2xl text-[#315d4c]">{value}</p>
+            <div className="stat-card-motion rounded-2xl border border-[#dfe7dc] bg-white p-5 cursor-default" key={title}>
+              <p className="text-xs font-medium text-slate-500">{title}</p>
+              <p className="mt-3 font-serif text-2xl font-bold text-[#315d4c]">{value}</p>
             </div>
           ))}
         </div>
@@ -574,7 +577,7 @@ export default function AdminPage() {
             <button
               key={id}
               onClick={() => setTab(id)}
-              className={`whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition ${tab === id ? 'bg-[#173d35] text-white shadow-sm' : 'bg-white text-[#315d4c] hover:bg-[#e3eee1]'}`}
+              className={`admin-tab-motion whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium ${tab === id ? 'admin-tab-active bg-[#173d35] text-white shadow-sm' : 'bg-white text-[#315d4c]'}`}
             >
               {label}
             </button>

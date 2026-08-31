@@ -1,20 +1,27 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useMemo } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser'
 
-const INACTIVITY_TIMEOUT_MS = 60 * 1000 // 1 minute of inactivity
+const INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000 // 30 minutes of admin inactivity
 
 export default function SessionTimeout() {
   const router = useRouter()
   const pathname = usePathname()
   const timeoutRef = useRef(null)
-  const supabase = createSupabaseBrowserClient()
+  const supabase = useMemo(() => {
+    try {
+      return createSupabaseBrowserClient()
+    } catch {
+      return null
+    }
+  }, [])
 
   useEffect(() => {
-    // Do not run timeout on public login page
-    if (pathname === '/login') return
+    // Only run inactivity timeout on administrative pages
+    if (!pathname || !pathname.startsWith('/admin')) return
+    if (!supabase) return
 
     const resetTimer = () => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current)
@@ -32,14 +39,11 @@ export default function SessionTimeout() {
       }, INACTIVITY_TIMEOUT_MS)
     }
 
-    // Interaction events to detect user activity
     const events = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll', 'click']
-
     events.forEach(event => {
       window.addEventListener(event, resetTimer, { passive: true })
     })
 
-    // Start timer on initial mount
     resetTimer()
 
     return () => {
