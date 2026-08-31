@@ -28,7 +28,7 @@ import Razorpay from 'razorpay'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { IMAGE_DEFAULTS } from '@/lib/siteImages'
-import { sendPaidBookingEmails, sendAdminConfigAlert } from '@/lib/booking-email'
+import { sendPaidBookingEmails, sendAdminConfigAlert, sendBookingCancellationEmail } from '@/lib/booking-email'
 import { normaliseBookingTerms } from '@/lib/booking-terms'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 import { sendAutomatedWhatsAppMessage } from '@/lib/whatsapp'
@@ -1547,9 +1547,17 @@ export async function PATCH(request, { params }) {
       if (error) return NextResponse.json({ error: error.message }, { status: 500 })
       const enriched = enrichBookingWithAdvanceNotes(data)
       
-      const email = body.status === 'confirmed' && existing.status !== 'confirmed'
-        ? await sendPaymentConfirmation(admin, enriched, 'admin booking confirmation', { sendCustomer: false, sendOwners: true })
-        : null
+      let email = null
+      if (patch.status === 'confirmed' && existing.status !== 'confirmed') {
+        email = await sendPaymentConfirmation(admin, enriched, 'admin booking confirmation', { sendCustomer: false, sendOwners: true })
+      } else if (patch.status === 'cancelled' && existing.status !== 'cancelled') {
+        console.log(`[API:BOOKINGS:CANCELLED] Booking ${bookingId} cancelled by ${guard.user.email}. Dispatching refund notification email...`)
+        email = await sendBookingCancellationEmail({
+          booking: enriched,
+          cancelledBy: guard.user.email,
+          reason: body.reason || 'Cancelled by resort administration',
+        })
+      }
       return NextResponse.json({ ...enriched, email })
     }
 
