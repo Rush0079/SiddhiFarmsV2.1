@@ -45,6 +45,110 @@ function calculateHoursDuration(inStr, outStr) {
   return Number.isInteger(hours) ? `${hours} Hours` : `${hours.toFixed(1)} Hours`
 }
 
+function FlashSaleShowcase({ flashSale, onBook, timeLeft }) {
+  if (!flashSale) return null
+
+  const badgeText = flashSale.badgeText || '⚡ FLASH SALE'
+  const title = flashSale.name || 'Special Promotional Offer'
+  const discountFormatted = flashSale.discountType === 'percentage'
+    ? `${flashSale.discountValue || 20}% OFF`
+    : `₹${flashSale.discountValue || 1000} FLAT DISCOUNT`
+  const message = flashSale.bannerMessage || 'Book your countryside getaway today and enjoy exclusive savings across luxury villas and private pool suites.'
+  const image = flashSale.imageUrl || '/siddhi/page-02.jpg'
+
+  return (
+    <section className="container py-8 sm:py-12">
+      <motion.div
+        initial={{ opacity: 0, y: 25 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.6 }}
+        className="relative overflow-hidden rounded-3xl border border-amber-400/40 bg-gradient-to-br from-[#123830] via-[#17483d] to-[#0c2822] p-6 text-white shadow-2xl sm:p-10"
+      >
+        {/* Ambient Glows */}
+        <div className="pointer-events-none absolute -right-24 -top-24 h-96 w-96 rounded-full bg-amber-500/15 blur-3xl animate-pulse" />
+        <div className="pointer-events-none absolute -left-20 -bottom-20 h-80 w-80 rounded-full bg-emerald-400/10 blur-3xl" />
+
+        <div className="relative z-10 grid gap-8 lg:grid-cols-[1.15fr_0.85fr] lg:items-center">
+          {/* Left Column */}
+          <div className="flex flex-col justify-between">
+            <div>
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 px-3.5 py-1 text-xs font-black uppercase tracking-wider text-amber-950 shadow-md animate-pulse">
+                  <Zap size={14} className="fill-amber-950" />
+                  {badgeText}
+                </span>
+                {timeLeft && (
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-black/40 border border-amber-400/30 px-3 py-1 font-mono text-xs font-bold text-amber-300 backdrop-blur-md">
+                    <Clock size={13} />
+                    Ends in: {timeLeft}
+                  </span>
+                )}
+              </div>
+
+              <div className="mt-5">
+                <div className="flex flex-wrap items-baseline gap-3">
+                  <h3 className="font-serif text-2xl font-bold sm:text-3xl text-white">
+                    {title}
+                  </h3>
+                  <span className="rounded-xl bg-amber-400/20 border border-amber-400/40 px-3 py-1 text-sm font-black text-amber-300">
+                    {discountFormatted}
+                  </span>
+                </div>
+                <p className="mt-3 text-sm sm:text-base leading-relaxed text-white/80 max-w-xl">
+                  {message}
+                </p>
+                <div className="mt-4 flex flex-wrap items-center gap-4 text-xs font-semibold text-amber-200/90">
+                  <span className="flex items-center gap-1.5">✓ Instant promotional discount applied on checkout</span>
+                  <span className="flex items-center gap-1.5">✓ Complimentary Mini Water Park &amp; Pool Access</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-8 flex flex-wrap items-center justify-between gap-4 border-t border-white/10 pt-6">
+              <div className="text-xs text-white/70">
+                <span>Limited room &amp; villa slots for upcoming dates</span>
+              </div>
+              <motion.button
+                whileHover={{ scale: 1.04, y: -1 }}
+                whileTap={{ scale: 0.97 }}
+                onClick={onBook}
+                className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-amber-400 via-amber-300 to-amber-500 px-6 py-3 text-sm font-extrabold text-amber-950 shadow-xl hover:shadow-amber-500/25 transition-all cursor-pointer"
+              >
+                <span>Claim Offer &amp; Book Now</span>
+                <ArrowUpRight size={17} />
+              </motion.button>
+            </div>
+          </div>
+
+          {/* Right Column: Promotional Image */}
+          <div className="relative group overflow-hidden rounded-2xl border border-white/15 bg-black/30 aspect-[16/10] sm:aspect-[16/9] lg:aspect-[4/3]">
+            <img
+              src={image}
+              alt={title}
+              className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+            <div className="absolute bottom-4 left-4 right-4 flex items-end justify-between gap-2">
+              <div>
+                <span className="rounded-lg bg-black/60 backdrop-blur-md px-2.5 py-1 text-[11px] font-bold text-amber-300 border border-white/10">
+                  {badgeText}
+                </span>
+                <p className="mt-1 text-xs font-medium text-white/90 truncate max-w-[200px] sm:max-w-xs">
+                  {title}
+                </p>
+              </div>
+              <span className="rounded-full bg-amber-400 text-amber-950 px-3 py-1 text-xs font-extrabold shadow-sm shrink-0">
+                {discountFormatted}
+              </span>
+            </div>
+          </div>
+        </div>
+      </motion.div>
+    </section>
+  )
+}
+
 function BookingPanel({ pricing, user, onClose, flashSale }) {
   const [form, setForm] = useState({ name: user?.user_metadata?.full_name || '', email: user?.email || '', phone: user?.user_metadata?.phone || '', checkIn: '', checkOut: '', service: 'Master Bedroom', guests: '2', couponCode: '', aadhaarNumber: '', termsAccepted: false })
   const [stayType, setStayType] = useState('overnight') // 'overnight' | 'short_stay'
@@ -886,6 +990,15 @@ export default function App() {
             ))}
           </div>
         </section>
+
+        {/* Promotional Flash Sale Showcase Card */}
+        {flashSale && (
+          <FlashSaleShowcase
+            flashSale={flashSale}
+            onBook={() => setBookingOpen(true)}
+            timeLeft={saleTimeRemaining}
+          />
+        )}
 
         {/* Area 3: Story & Interactive Feature Highlights */}
         <section id="story" className="container grid gap-14 py-24 sm:py-32 md:grid-cols-[.8fr_1.2fr] md:items-center">
