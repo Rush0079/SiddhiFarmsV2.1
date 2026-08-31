@@ -63,10 +63,10 @@ function FlashSaleShowcase({ flashSale, onBook, timeLeft }) {
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
         transition={{ duration: 0.6 }}
-        className="relative overflow-hidden rounded-3xl border border-amber-400/40 bg-gradient-to-br from-[#123830] via-[#17483d] to-[#0c2822] p-6 text-white shadow-2xl sm:p-10"
+        className="relative overflow-hidden rounded-3xl border border-[#d5b36a]/40 bg-gradient-to-br from-[#0c2a22] via-[#133d32] to-[#081e18] p-6 text-white shadow-2xl sm:p-10"
       >
         {/* Ambient Glows */}
-        <div className="pointer-events-none absolute -right-24 -top-24 h-96 w-96 rounded-full bg-amber-500/15 blur-3xl animate-pulse" />
+        <div className="pointer-events-none absolute -right-24 -top-24 h-96 w-96 rounded-full bg-[#d5b36a]/12 blur-3xl animate-pulse" />
         <div className="pointer-events-none absolute -left-20 -bottom-20 h-80 w-80 rounded-full bg-emerald-400/10 blur-3xl" />
 
         <div className="relative z-10 grid gap-8 lg:grid-cols-[1.15fr_0.85fr] lg:items-center">
@@ -74,12 +74,12 @@ function FlashSaleShowcase({ flashSale, onBook, timeLeft }) {
           <div className="flex flex-col justify-between">
             <div>
               <div className="flex flex-wrap items-center gap-3">
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 px-3.5 py-1 text-xs font-black uppercase tracking-wider text-amber-950 shadow-md animate-pulse">
-                  <Zap size={14} className="fill-amber-950" />
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-[#d5b36a] via-[#e5cf92] to-[#c79d48] px-3.5 py-1 text-xs font-black uppercase tracking-wider text-[#0d2a23] shadow-md animate-pulse">
+                  <Zap size={14} className="fill-[#0d2a23]" />
                   {badgeText}
                 </span>
                 {timeLeft && (
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-black/40 border border-amber-400/30 px-3 py-1 font-mono text-xs font-bold text-amber-300 backdrop-blur-md">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-black/40 border border-[#d5b36a]/35 px-3 py-1 font-mono text-xs font-bold text-[#f7ebd0] backdrop-blur-md">
                     <Clock size={13} />
                     Ends in: {timeLeft}
                   </span>
@@ -91,14 +91,14 @@ function FlashSaleShowcase({ flashSale, onBook, timeLeft }) {
                   <h3 className="font-serif text-2xl font-bold sm:text-3xl text-white">
                     {title}
                   </h3>
-                  <span className="rounded-xl bg-amber-400/20 border border-amber-400/40 px-3 py-1 text-sm font-black text-amber-300">
+                  <span className="rounded-xl bg-[#d5b36a]/20 border border-[#d5b36a]/40 px-3 py-1 text-sm font-black text-[#f7ebd0]">
                     {discountFormatted}
                   </span>
                 </div>
                 <p className="mt-3 text-sm sm:text-base leading-relaxed text-white/80 max-w-xl">
                   {message}
                 </p>
-                <div className="mt-4 flex flex-wrap items-center gap-4 text-xs font-semibold text-amber-200/90">
+                <div className="mt-4 flex flex-wrap items-center gap-4 text-xs font-semibold text-[#f7ebd0]/90">
                   <span className="flex items-center gap-1.5">✓ Instant promotional discount applied on checkout</span>
                   <span className="flex items-center gap-1.5">✓ Complimentary Mini Water Park &amp; Pool Access</span>
                 </div>
@@ -113,7 +113,7 @@ function FlashSaleShowcase({ flashSale, onBook, timeLeft }) {
                 whileHover={{ scale: 1.04, y: -1 }}
                 whileTap={{ scale: 0.97 }}
                 onClick={onBook}
-                className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-amber-400 via-amber-300 to-amber-500 px-6 py-3 text-sm font-extrabold text-amber-950 shadow-xl hover:shadow-amber-500/25 transition-all cursor-pointer"
+                className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#d5b36a] via-[#f3dfa8] to-[#c79d48] px-6 py-3 text-sm font-extrabold text-[#0d2a23] shadow-xl hover:shadow-[#d5b36a]/25 transition-all cursor-pointer"
               >
                 <span>Claim Offer &amp; Book Now</span>
                 <ArrowUpRight size={17} />
@@ -131,14 +131,14 @@ function FlashSaleShowcase({ flashSale, onBook, timeLeft }) {
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
             <div className="absolute bottom-4 left-4 right-4 flex items-end justify-between gap-2">
               <div>
-                <span className="rounded-lg bg-black/60 backdrop-blur-md px-2.5 py-1 text-[11px] font-bold text-amber-300 border border-white/10">
+                <span className="rounded-lg bg-black/60 backdrop-blur-md px-2.5 py-1 text-[11px] font-bold text-[#f7ebd0] border border-white/10">
                   {badgeText}
                 </span>
                 <p className="mt-1 text-xs font-medium text-white/90 truncate max-w-[200px] sm:max-w-xs">
                   {title}
                 </p>
               </div>
-              <span className="rounded-full bg-amber-400 text-amber-950 px-3 py-1 text-xs font-extrabold shadow-sm shrink-0">
+              <span className="rounded-full bg-gradient-to-r from-[#d5b36a] to-[#c79d48] text-[#0d2a23] px-3 py-1 text-xs font-extrabold shadow-sm shrink-0">
                 {discountFormatted}
               </span>
             </div>
@@ -755,28 +755,28 @@ export default function App() {
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4 }}
-              className="relative z-30 overflow-hidden bg-gradient-to-r from-amber-600 via-amber-500 to-amber-700 text-amber-950 px-3 sm:px-4 py-2 sm:py-2.5 text-xs font-medium shadow-lg border-b border-amber-400"
+              className="relative z-30 overflow-hidden bg-gradient-to-r from-[#0d2a23] via-[#144237] to-[#0a231d] text-white px-3 sm:px-4 py-2 sm:py-2.5 text-xs font-medium shadow-md border-b border-[#d5b36a]/40"
             >
               <div className="container relative z-10 flex flex-wrap items-center justify-between gap-2">
                 <div className="flex flex-wrap items-center gap-2 font-bold tracking-wide">
                   <motion.span
                     animate={{ scale: [1, 1.06, 1] }}
                     transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-                    className="rounded-full bg-amber-950 px-2.5 py-0.5 text-[10px] sm:text-[11px] font-black uppercase text-amber-300 shadow-xs flex items-center gap-1 shrink-0"
+                    className="rounded-full bg-gradient-to-r from-[#d5b36a] to-[#c79d48] px-2.5 py-0.5 text-[10px] sm:text-[11px] font-black uppercase text-[#0d2a23] shadow-xs flex items-center gap-1 shrink-0"
                   >
-                    <Zap size={12} className="fill-amber-300 text-amber-300" />
+                    <Zap size={12} className="fill-[#0d2a23] text-[#0d2a23]" />
                     {flashSale.badgeText || '⚡ FLASH SALE'}
                   </motion.span>
-                  <span className="text-amber-950 font-bold text-xs sm:text-sm">
+                  <span className="text-[#f7ebd0] font-bold text-xs sm:text-sm">
                     {flashSale.name || 'Special Promotional Offer'}:
                   </span>
-                  <span className="text-amber-950/90 font-medium text-xs">
+                  <span className="text-white/85 font-medium text-xs">
                     {flashSale.bannerMessage || (flashSale.discountType === 'percentage' ? `Get ${flashSale.discountValue}% OFF across stays!` : `Get ₹${flashSale.discountValue} OFF across stays!`)}
                   </span>
                 </div>
                 <div className="flex items-center gap-2 sm:gap-3 ml-auto sm:ml-0">
                   {saleTimeRemaining && (
-                    <div className="flex items-center gap-1 rounded-lg bg-amber-950/15 border border-amber-900/20 px-2 py-0.5 font-mono text-[11px] sm:text-xs font-bold text-amber-950">
+                    <div className="flex items-center gap-1 rounded-lg bg-black/30 border border-[#d5b36a]/30 px-2 py-0.5 font-mono text-[11px] sm:text-xs font-bold text-[#f7ebd0]">
                       <Clock size={12} />
                       <span>{saleTimeRemaining}</span>
                     </div>
@@ -785,7 +785,7 @@ export default function App() {
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     onClick={() => setBookingOpen(true)}
-                    className="rounded-full bg-amber-950 px-3 py-1 text-[11px] sm:text-xs font-bold text-amber-200 hover:bg-black transition shadow-sm cursor-pointer shrink-0"
+                    className="rounded-full bg-gradient-to-r from-[#d5b36a] via-[#f3dfa8] to-[#c79d48] px-3.5 py-1 text-[11px] sm:text-xs font-extrabold text-[#0d2a23] hover:brightness-110 transition shadow-sm cursor-pointer shrink-0"
                   >
                     Book Now →
                   </motion.button>
