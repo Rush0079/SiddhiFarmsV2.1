@@ -4,10 +4,10 @@
  */
 
 export const SessionTimeoutConfig = {
-  INACTIVITY_TIMEOUT_MS: 15 * 60 * 1000, // 15 minutes
+  INACTIVITY_TIMEOUT_MS: 60 * 1000, // 1 minute of administrative inactivity
   STORAGE_KEY: 'siddhi_admin_last_active',
-  HEARTBEAT_INTERVAL_MS: 5000,
-  WRITE_THROTTLE_MS: 2000,
+  HEARTBEAT_INTERVAL_MS: 1000, // Check every 1 second
+  WRITE_THROTTLE_MS: 1000,
   COOKIE_NAME: 'siddhi_2fa_session',
 }
 

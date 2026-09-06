@@ -87,6 +87,7 @@ import {
   handleAuthMe,
   handleAuth2FaSend,
   handleAuth2FaVerify,
+  handleAuthLogout,
   handleGetMe,
 } from '@/lib/api/handlers/admin-users'
 
@@ -284,6 +285,11 @@ export async function POST(request, { params }) {
     // 18. POST /api/auth/2fa/verify
     if (path[0] === 'auth' && path[1] === '2fa' && path[2] === 'verify') {
       return handleAuth2FaVerify(admin, body, request)
+    }
+
+    // 19. POST /api/auth/logout | /api/auth/signout
+    if (path[0] === 'auth' && (path[1] === 'logout' || path[1] === 'signout')) {
+      return handleAuthLogout()
     }
 
     console.warn(`[API:ROUTER:NOT_FOUND] Unrecognized POST path: /api/${routeKey}`)

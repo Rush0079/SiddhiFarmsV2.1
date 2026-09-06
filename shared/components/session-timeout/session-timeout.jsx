@@ -13,7 +13,8 @@ export default function SessionTimeout() {
 
   useEffect(() => {
     // Only enforce session timeout on administrative routes
-    if (!pathname || !pathname.startsWith('/admin')) return
+    const isAdministrative = pathname && (pathname.startsWith('/admin') || pathname.startsWith('/jarvis'))
+    if (!isAdministrative) return
 
     let isTerminating = false
 
@@ -21,22 +22,28 @@ export default function SessionTimeout() {
       if (isTerminating) return
       isTerminating = true
 
+      console.warn('[SESSION:TIMEOUT] Admin inactivity threshold reached (1 min). Logging out...')
+
+      // 1. Immediately invalidate local token and storage
       try {
-        console.warn('[SESSION:TIMEOUT] Admin inactivity threshold reached. Logging out...')
-        const supabase = createSupabaseBrowserClient()
-        await supabase.auth.signOut().catch(() => {})
-
-        // Clear 2FA Session Cookie
-        document.cookie = `${SessionTimeoutConfig.COOKIE_NAME}=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT; Max-Age=0; SameSite=Lax;`
         localStorage.removeItem(SessionTimeoutConfig.STORAGE_KEY)
+      } catch {}
 
-        // Redirect to login with timeout notice
-        router.push('/login?reason=timeout')
-        router.refresh()
-      } catch (err) {
-        console.error('[SESSION:TIMEOUT_ERROR]', err)
-        router.push('/login?reason=timeout')
-      }
+      document.cookie = `${SessionTimeoutConfig.COOKIE_NAME}=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT; Max-Age=0; SameSite=Lax;`
+
+      // 2. Clear server-side HTTP-only 2FA session cookie (fire & forget with keepalive)
+      try {
+        fetch('/api/auth/logout', { method: 'POST', keepalive: true }).catch(() => {})
+      } catch {}
+
+      // 3. Trigger Supabase sign out
+      try {
+        const supabase = createSupabaseBrowserClient()
+        supabase?.auth?.signOut()?.catch(() => {})
+      } catch {}
+
+      // 4. Hard redirect to login with timeout notice
+      window.location.href = '/login?reason=timeout'
     }
 
     const updateActivity = () => {
@@ -62,8 +69,21 @@ export default function SessionTimeout() {
       }
     }
 
+    // Check if prior session stored in localStorage is already expired on mount
+    try {
+      const stored = localStorage.getItem(SessionTimeoutConfig.STORAGE_KEY)
+      const lastActive = stored ? Number(stored) || 0 : 0
+      if (lastActive > 0 && isSessionExpired(lastActive, Date.now(), SessionTimeoutConfig.INACTIVITY_TIMEOUT_MS)) {
+        performSignOut()
+        return
+      }
+    } catch {}
+
     // Initialize activity on mount
-    updateActivity()
+    lastUpdateRef.current = Date.now()
+    try {
+      localStorage.setItem(SessionTimeoutConfig.STORAGE_KEY, String(Date.now()))
+    } catch {}
 
     // Activity event listeners
     const events = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll', 'click']
@@ -72,7 +92,7 @@ export default function SessionTimeout() {
     // Heartbeat check interval
     const interval = setInterval(checkInactivity, SessionTimeoutConfig.HEARTBEAT_INTERVAL_MS)
 
-    // Visibility / Tab focus check
+    // Visibility / Tab focus check (triggers instantly when user switches back to tab)
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         checkInactivity()
