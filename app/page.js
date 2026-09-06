@@ -67,6 +67,9 @@ export default function HomePage() {
   /** @state {Object} pricing - Current rate-card pricing object */
   const [pricing, setPricing] = useState({})
 
+  /** @state {Object} images - CMS image slot overrides from /api/images */
+  const [images, setImages] = useState({})
+
   /** @state {Object|null} flashSale - Active promotional sale config */
   const [flashSale, setFlashSale] = useState(null)
 
@@ -78,6 +81,9 @@ export default function HomePage() {
 
   /** @memo supabase - Supabase browser client singleton */
   const supabase = useMemo(() => createSupabaseBrowserClient(), [])
+
+  /** Image resolver helper merging dynamic CMS overrides with local fallback assets */
+  const img = (key) => siteImage(images, key)
 
   // ─── Authentication & Profile Sync ────────────────────────────────────────
   useEffect(() => {
@@ -135,9 +141,9 @@ export default function HomePage() {
     }
   }
 
-  // ─── Pricing & Flash Sale Ingestion ────────────────────────────────────────
+  // ─── Pricing, Images & Flash Sale Ingestion ──────────────────────────────
   useEffect(() => {
-    console.log('[UI:HomePage:DATA] Loading pricing & flash-sale data')
+    console.log('[UI:HomePage:DATA] Loading pricing, images & flash-sale data')
 
     // Ingest pricing
     fetch('/api/pricing')
@@ -148,24 +154,36 @@ export default function HomePage() {
       })
       .catch((err) => console.error('[UI:HomePage:DATA:ERROR] Pricing error:', err))
 
+    // Ingest image CMS overrides
+    fetch('/api/images')
+      .then((res) => (res.ok ? res.json() : {}))
+      .then((data) => {
+        console.log('[UI:HomePage:DATA] Site images loaded')
+        setImages(data || {})
+      })
+      .catch((err) => console.warn('[UI:HomePage:DATA:WARN] Images error:', err))
+
     // Ingest active flash sale
-    fetch('/api/flash-sale')
+    fetch(`/api/flash-sale?t=${Date.now()}`, { cache: 'no-store' })
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (data && data.isActive) {
-          console.log('[UI:HomePage:DATA] Active flash sale loaded:', data.name)
-          setFlashSale(data)
+        if (data?.active && data?.sale) {
+          console.log('[UI:HomePage:DATA] Active flash sale loaded:', data.sale.name)
+          setFlashSale(data.sale)
+        } else {
+          setFlashSale(null)
         }
       })
-      .catch((err) => console.warn('[UI:HomePage:DATA:WARN] Flash sale load skipped:', err))
+      .catch((err) => console.warn('[UI:HomePage:DATA:WARN] Flash sale error:', err))
   }, [])
 
   // ─── Flash Sale Countdown Loop ────────────────────────────────────────────
   useEffect(() => {
-    if (!flashSale || !flashSale.isActive || !flashSale.endDate) return
+    const end = flashSale?.endDateTimeIso || flashSale?.endDateTime || flashSale?.endDate
+    if (!flashSale || !end) return
 
     const updateTimer = () => {
-      const diff = new Date(flashSale.endDate).getTime() - Date.now()
+      const diff = new Date(end).getTime() - Date.now()
       if (diff <= 0) {
         setSaleTimeRemaining('EXPIRED')
         return
@@ -239,7 +257,7 @@ export default function HomePage() {
 
         {/* 2. Hero Section */}
         <HeroSection
-          heroImage={siteImage('hero')}
+          heroImage={img('homeHero')}
           onBookingOpen={() => setBookingOpen(true)}
         />
 
@@ -255,12 +273,12 @@ export default function HomePage() {
         {/* 6. Accommodation Stay Cards */}
         <StayCards
           pricing={pricing}
-          img={siteImage}
+          img={img}
           onBookingOpen={() => setBookingOpen(true)}
         />
 
         {/* 7. Promotional Flash Sale Showcase Banner */}
-        {flashSale && flashSale.isActive && (
+        {flashSale && (
           <FlashSaleShowcase
             flashSale={flashSale}
             timeLeft={saleTimeRemaining}
@@ -269,10 +287,10 @@ export default function HomePage() {
         )}
 
         {/* 8. Coming Soon Adventure Teaser */}
-        <AdventureSection img={siteImage} />
+        <AdventureSection img={img} />
 
         {/* 9. Photo Gallery Showcase Grid */}
-        <GallerySection img={siteImage} />
+        <GallerySection img={img} />
 
         {/* 10. Site Footer & Developer Attribution */}
         <Footer />
