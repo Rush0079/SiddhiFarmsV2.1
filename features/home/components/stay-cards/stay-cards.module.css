@@ -1,0 +1,23 @@
+.staySection {
+  padding-top: 6rem;
+  padding-bottom: 6rem;
+}
+
+@media (min-width: 640px) {
+  .staySection {
+    padding-top: 8rem;
+    padding-bottom: 8rem;
+  }
+}
+
+.cardsGrid {
+  margin-top: 3.5rem;
+  display: grid;
+  gap: 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .cardsGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}

@@ -1,83 +1,9 @@
 /**
- * ============================================================================
- * EXPERIENCES GRID COMPONENT — Service Offerings Showcase
- * ============================================================================
+ * Siddhi Farms - Experiences Grid (Legacy Re-export Wrapper)
  *
- * @fileoverview  Renders the 6-card experience offerings grid (Farm Stays,
- *                Day Tours, Water Park, Get-Togethers, Birthday, Wedding).
- *                Each card links to its detail page and shows live pricing.
- *
- * @module        components/customer/experiences-grid
- * @author        Rushikesh Nigade
- * @design-pattern Presentational Component — stateless, data-driven grid.
- *
- * @param {Object}   props
- * @param {Object}   props.pricing - Current pricing object from Supabase.
- * ============================================================================
+ * @deprecated Use `features/home` for direct imports.
  */
+
 'use client'
 
-import { motion } from 'framer-motion'
-import { ArrowUpRight, Sparkles } from 'lucide-react'
-import { EXPERIENCES } from '@/lib/helpers/formatting'
-
-/**
- * ExperiencesGrid — Dark-themed grid showcasing all resort experiences.
- *
- * @param   {Object} props - See @fileoverview for prop descriptions.
- * @returns {JSX.Element} The experiences section element.
- */
-export default function ExperiencesGrid({ pricing }) {
-  console.log('[UI:ExperiencesGrid:RENDER] Rendering', EXPERIENCES.length, 'experience cards')
-
-  return (
-    <section id="experiences" className="bg-[#173d35] py-24 text-white sm:py-32">
-      <div className="container">
-        {/* Section Header */}
-        <div className="flex flex-wrap items-end justify-between gap-6">
-          <div>
-            <p className="eyebrow text-[#d5b36a]">Choose your pace</p>
-            <h2 className="section-title text-white">
-              There is always<br /><em>more to experience.</em>
-            </h2>
-          </div>
-          <Sparkles
-            className="block text-[#d5b36a] animate-spin-round cursor-pointer hover:opacity-80 transition-opacity h-8 w-8 sm:h-11 sm:w-11"
-            strokeWidth={1.2}
-            style={{ filter: 'drop-shadow(0 0 10px rgba(213, 179, 106, 0.45))' }}
-          />
-        </div>
-
-        {/* Experience Cards Grid */}
-        <div className="mt-14 grid gap-px overflow-hidden rounded-2xl bg-white/15 md:grid-cols-3">
-          {EXPERIENCES.map(([slug, title, desc, priceKey, unit], i) => {
-            const rate = pricing[priceKey] || 0
-            return (
-              <motion.a
-                href={`/details/${slug}`}
-                key={slug}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: '-50px' }}
-                transition={{ duration: 0.5, delay: i * 0.08 }}
-                whileHover={{ y: -6 }}
-                whileTap={{ scale: 0.98 }}
-                className="luxury-card group block bg-[#214b40] p-8 transition-colors duration-300 hover:bg-[#28574a] sm:p-10"
-              >
-                <span className="text-sm font-bold text-[#d5b36a]">0{i + 1}</span>
-                <h3 className="mt-20 font-serif text-3xl transition-transform duration-300 group-hover:translate-x-1">{title}</h3>
-                <p className="mt-4 min-h-14 text-sm leading-6 text-white/65">{desc}</p>
-                <div className="mt-8 flex items-center justify-between border-t border-white/15 pt-5 text-sm">
-                  <span className="font-medium text-[#e3c77c]">
-                    ₹{rate.toLocaleString('en-IN')} <span className="text-white/50 text-xs">/ {unit.replace('per ', '')}</span>
-                  </span>
-                  <ArrowUpRight className="transition group-hover:translate-x-1 group-hover:-translate-y-1 text-[#d5b36a]" size={18} />
-                </div>
-              </motion.a>
-            )
-          })}
-        </div>
-      </div>
-    </section>
-  )
-}
+export { ExperiencesGrid as default } from '@/features/home';

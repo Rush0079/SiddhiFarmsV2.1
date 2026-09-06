@@ -1,0 +1,54 @@
+/**
+ * @file two-factor-auth.module.css
+ * @description Scoped styles for TwoFactorAuth component.
+ */
+
+.twoFactorCard {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.channelBadge {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  border-radius: 0.75rem;
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 0.75rem 1rem;
+}
+
+.otpInputGroup {
+  position: relative;
+  display: flex;
+  justify-content: center;
+}
+
+.otpField {
+  width: 100%;
+  border-radius: 0.75rem;
+  border: 1.5px solid rgba(213, 179, 106, 0.4);
+  background-color: rgba(7, 25, 20, 0.8);
+  padding: 0.875rem 1rem;
+  text-align: center;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 1.5rem;
+  letter-spacing: 0.35em;
+  font-weight: 700;
+  color: #f7ebd0;
+  outline: none;
+  transition: all 200ms ease;
+}
+
+.otpField:focus {
+  border-color: #d5b36a;
+  box-shadow: 0 0 15px rgba(213, 179, 106, 0.3);
+}
+
+.actionRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 0.5rem;
+}

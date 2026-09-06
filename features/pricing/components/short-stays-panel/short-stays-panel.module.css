@@ -1,0 +1,19 @@
+/**
+ * @file short-stays-panel.module.css
+ * @description Scoped styles for the ShortStaysPanel component.
+ */
+
+.panelContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  margin-top: 2rem;
+}
+
+.rateCard {
+  border-radius: 1rem;
+  border: 1px solid #dfe7dc;
+  background-color: #ffffff;
+  padding: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}

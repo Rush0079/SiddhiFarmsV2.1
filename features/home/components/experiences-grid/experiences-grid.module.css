@@ -1,0 +1,28 @@
+.experiencesSection {
+  background-color: #173d35;
+  padding-top: 6rem;
+  padding-bottom: 6rem;
+  color: #ffffff;
+}
+
+@media (min-width: 640px) {
+  .experiencesSection {
+    padding-top: 8rem;
+    padding-bottom: 8rem;
+  }
+}
+
+.experiencesGrid {
+  margin-top: 3.5rem;
+  display: grid;
+  gap: 1px;
+  overflow: hidden;
+  border-radius: 1rem;
+  background-color: rgba(255, 255, 255, 0.15);
+}
+
+@media (min-width: 768px) {
+  .experiencesGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}

@@ -1,0 +1,56 @@
+/**
+ * @file pricing-table.module.css
+ * @description Scoped styles for the PricingTable component.
+ */
+
+.pricingCard {
+  border-radius: 1rem;
+  border: 1px solid #dfe7dc;
+  background-color: #ffffff;
+  padding: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.rateGrid {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1.25rem;
+}
+
+@media (min-width: 640px) {
+  .rateGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1024px) {
+  .rateGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.rateCard {
+  border-radius: 0.75rem;
+  border: 1px solid #eef2eb;
+  background-color: #fbfdf9;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.currencyInput {
+  border-radius: 0.5rem;
+  border: 1px solid #dfe7dc;
+  background-color: #ffffff;
+  padding: 0.375rem 0.625rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #173d35;
+  outline: none;
+  width: 100%;
+}
+
+.currencyInput:focus {
+  border-color: #315d4c;
+}

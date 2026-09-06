@@ -179,13 +179,16 @@ export default function HomePage() {
 
   // ─── Flash Sale Countdown Loop ────────────────────────────────────────────
   useEffect(() => {
-    const end = flashSale?.endDateTimeIso || flashSale?.endDateTime || flashSale?.endDate
-    if (!flashSale || !end) return
+    const target = flashSale?.isTeaser
+      ? (flashSale.startDateTimeIso || flashSale.startDateIso || flashSale.startDateTime)
+      : (flashSale?.endDateTimeIso || flashSale?.endDateIso || flashSale?.endDateTime || flashSale?.endDate)
+
+    if (!flashSale || !target) return
 
     const updateTimer = () => {
-      const diff = new Date(end).getTime() - Date.now()
+      const diff = new Date(target).getTime() - Date.now()
       if (diff <= 0) {
-        setSaleTimeRemaining('EXPIRED')
+        setSaleTimeRemaining(flashSale?.isTeaser ? 'STARTING NOW' : 'EXPIRED')
         return
       }
       const days = Math.floor(diff / (1000 * 60 * 60 * 24))

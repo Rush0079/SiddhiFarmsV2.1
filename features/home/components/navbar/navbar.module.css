@@ -1,0 +1,40 @@
+.navbarHeader {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  z-index: 20;
+  width: 100%;
+}
+
+.flashBanner {
+  position: relative;
+  z-index: 30;
+  overflow: hidden;
+  background: linear-gradient(to right, #0d2a23, #144237, #0a231d);
+  color: #ffffff;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  border-bottom: 1px solid rgba(213, 179, 106, 0.4);
+}
+
+@media (min-width: 640px) {
+  .flashBanner {
+    padding: 0.625rem 1rem;
+  }
+}
+
+.navRow {
+  display: flex;
+  height: 5rem;
+  align-items: center;
+  justify-content: space-between;
+}
+
+@media (min-width: 640px) {
+  .navRow {
+    height: 6rem;
+  }
+}

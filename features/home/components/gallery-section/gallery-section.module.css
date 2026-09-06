@@ -1,0 +1,12 @@
+.gallerySection {
+  background-color: #f0f3ec;
+  padding-top: 6rem;
+  padding-bottom: 6rem;
+}
+
+@media (min-width: 640px) {
+  .gallerySection {
+    padding-top: 8rem;
+    padding-bottom: 8rem;
+  }
+}

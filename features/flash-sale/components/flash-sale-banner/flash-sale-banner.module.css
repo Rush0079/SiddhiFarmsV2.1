@@ -1,0 +1,59 @@
+/**
+ * @file flash-sale-banner.module.css
+ * @description Scoped styles for the customer FlashSaleBanner component.
+ */
+
+.bannerCard {
+  position: relative;
+  overflow: hidden;
+  border-radius: 1.5rem;
+  border: 1px solid rgba(213, 179, 106, 0.4);
+  background: linear-gradient(135deg, #0c2a22 0%, #133d32 50%, #081e18 100%);
+  padding: 1.5rem;
+  color: #ffffff;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
+}
+
+@media (min-width: 640px) {
+  .bannerCard {
+    padding: 2.5rem;
+  }
+}
+
+.ambientGlowGold {
+  pointer-events: none;
+  position: absolute;
+  top: -6rem;
+  right: -6rem;
+  height: 24rem;
+  width: 24rem;
+  border-radius: 9999px;
+  background-color: rgba(213, 179, 106, 0.12);
+  filter: blur(64px);
+}
+
+.ambientGlowEmerald {
+  pointer-events: none;
+  position: absolute;
+  bottom: -5rem;
+  left: -5rem;
+  height: 20rem;
+  width: 20rem;
+  border-radius: 9999px;
+  background-color: rgba(52, 211, 153, 0.1);
+  filter: blur(64px);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  border-radius: 9999px;
+  background-color: rgba(213, 179, 106, 0.15);
+  border: 1px solid rgba(213, 179, 106, 0.4);
+  padding: 0.25rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #f7ebd0;
+  letter-spacing: 0.05em;
+}

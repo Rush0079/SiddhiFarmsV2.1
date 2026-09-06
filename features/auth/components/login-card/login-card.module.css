@@ -1,0 +1,87 @@
+/**
+ * @file login-card.module.css
+ * @description Scoped styles for the LoginCard component.
+ */
+
+.cardContainer {
+  position: relative;
+  width: 100%;
+  max-width: 28rem;
+  overflow: hidden;
+  border-radius: 1.5rem;
+  border: 1px solid rgba(213, 179, 106, 0.3);
+  background: linear-gradient(to bottom, rgba(12, 42, 34, 0.95), rgba(7, 25, 20, 0.98));
+  padding: 2.5rem;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.ambientGlowTop {
+  pointer-events: none;
+  position: absolute;
+  top: -5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  height: 10rem;
+  width: 10rem;
+  border-radius: 9999px;
+  background-color: rgba(213, 179, 106, 0.15);
+  filter: blur(48px);
+}
+
+.ambientGlowBottom {
+  pointer-events: none;
+  position: absolute;
+  bottom: -4rem;
+  right: -2rem;
+  height: 8rem;
+  width: 8rem;
+  border-radius: 9999px;
+  background-color: rgba(64, 145, 108, 0.1);
+  filter: blur(40px);
+}
+
+.formGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.inputField {
+  width: 100%;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background-color: rgba(0, 0, 0, 0.35);
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  color: #ffffff;
+  outline: none;
+  transition: all 200ms ease;
+}
+
+.inputField:focus {
+  border-color: #d5b36a;
+  box-shadow: 0 0 0 1px #d5b36a, 0 0 12px rgba(213, 179, 106, 0.25);
+}
+
+.errorBanner {
+  border-radius: 0.75rem;
+  border: 1px solid rgba(248, 113, 113, 0.3);
+  background-color: rgba(127, 29, 29, 0.3);
+  padding: 0.75rem 1rem;
+  font-size: 0.75rem;
+  color: #fca5a5;
+}
+
+.timeoutNotice {
+  border-radius: 0.75rem;
+  border: 1px solid rgba(213, 179, 106, 0.3);
+  background-color: rgba(213, 179, 106, 0.1);
+  padding: 0.625rem 0.875rem;
+  font-size: 0.75rem;
+  color: #f7ebd0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}

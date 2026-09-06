@@ -1,0 +1,25 @@
+/**
+ * @file team-management.module.css
+ * @description Scoped styles for the TeamManagement component.
+ */
+
+.teamContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  margin-top: 2rem;
+}
+
+.cardSection {
+  border-radius: 1rem;
+  border: 1px solid #dfe7dc;
+  background-color: #ffffff;
+  padding: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+@media (min-width: 640px) {
+  .cardSection {
+    padding: 2rem;
+  }
+}

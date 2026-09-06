@@ -1,0 +1,61 @@
+/**
+ * @file flash-sale-scheduler.module.css
+ * @description Scoped styles for the FlashSaleScheduler component and annual sales engine.
+ */
+
+.schedulerCard {
+  margin-top: 2rem;
+  border-radius: 1rem;
+  border: 1px solid #dfe7dc;
+  background-color: #ffffff;
+  padding: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+@media (min-width: 640px) {
+  .schedulerCard {
+    padding: 2rem;
+  }
+}
+
+.bannerPreview {
+  height: 9rem;
+  width: 100%;
+  border-radius: 0.75rem;
+  border: 1px solid #dfe7dc;
+  object-fit: cover;
+}
+
+.annualSection {
+  margin-top: 3rem;
+  padding-top: 2rem;
+  border-top: 1px dashed #dfe7dc;
+}
+
+.annualGrid {
+  margin-top: 1.5rem;
+  display: grid;
+  gap: 1.25rem;
+}
+
+@media (min-width: 768px) {
+  .annualGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.holidayCard {
+  border-radius: 1rem;
+  border: 1px solid #dfe7dc;
+  background-color: #fbfdfa;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: all 0.2s ease;
+}
+
+.holidayCard:hover {
+  border-color: #315d4c;
+  box-shadow: 0 4px 12px rgba(23, 61, 53, 0.06);
+}

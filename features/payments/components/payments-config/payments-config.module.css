@@ -1,0 +1,23 @@
+/**
+ * @file payments-config.module.css
+ * @description Scoped styles for PaymentsConfig admin component.
+ */
+
+.configCard {
+  margin-top: 2rem;
+  border-radius: 1rem;
+  border: 1px solid #dfe7dc;
+  background-color: #ffffff;
+  padding: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.qrContainer {
+  margin-top: 1.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #eef2eb;
+}
