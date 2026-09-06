@@ -37,16 +37,15 @@ export class AuthService {
    * Request 2FA OTP for a verified user
    * @param {Object} payload
    * @param {string} payload.email
-   * @param {string} [payload.captchaToken]
-   * @returns {Promise<{ success: boolean, maskedEmail?: string, maskedPhone?: string, error?: string }>}
+   * @returns {Promise<{ success: boolean, requires2FA?: boolean, maskedEmail?: string, maskedPhone?: string, error?: string }>}
    */
-  static async requestTwoFactorOtp({ email, captchaToken }) {
+  static async requestTwoFactorOtp({ email }) {
     try {
       console.log(`[AUTH:SERVICE:OTP_REQUEST] Requesting 2FA OTP for ${email}`)
-      const res = await fetch('/api/auth/request-otp', {
+      const res = await fetch('/api/auth/2fa/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.trim().toLowerCase(), captchaToken }),
+        body: JSON.stringify({ email: email.trim().toLowerCase() }),
       })
 
       const data = await res.json()
@@ -56,6 +55,7 @@ export class AuthService {
 
       return {
         success: true,
+        requires2FA: data.requires2FA,
         maskedEmail: data.maskedEmail,
         maskedPhone: data.maskedPhone,
       }
@@ -75,17 +75,17 @@ export class AuthService {
   static async verifyTwoFactorOtp({ email, otpCode }) {
     try {
       console.log(`[AUTH:SERVICE:OTP_VERIFY] Verifying OTP for ${email}`)
-      const res = await fetch('/api/auth/verify-otp', {
+      const res = await fetch('/api/auth/2fa/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: email.trim().toLowerCase(),
-          otp: otpCode.trim(),
+          otpCode: otpCode.trim(),
         }),
       })
 
       const data = await res.json()
-      if (!res.ok) {
+      if (!res.ok || !data.ok) {
         return { success: false, error: data.error || 'Invalid OTP code' }
       }
 
