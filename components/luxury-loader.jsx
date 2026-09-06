@@ -108,10 +108,13 @@ export function LuxuryPageLoader({
  * Luxury Overlay Transition Loader (used during login redirection, payment processing, booking creation)
  */
 export function LuxuryOverlayLoader({
+  show = true,
   title = 'Authenticating...',
   subtitle = 'Redirecting to your dashboard',
   progressMessage = 'Securing session token & initializing environment',
 }) {
+  if (!show) return null
+
   return (
     <motion.div
       initial={{ opacity: 0 }}

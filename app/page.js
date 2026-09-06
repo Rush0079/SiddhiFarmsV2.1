@@ -218,11 +218,13 @@ export default function HomePage() {
       )}
 
       {/* Auth state transition overlay loader */}
-      <LuxuryOverlayLoader
-        show={isAuthLoading}
-        title="Signing Out..."
-        subtitle="Clearing your session securely"
-      />
+      {isAuthLoading && (
+        <LuxuryOverlayLoader
+          show={isAuthLoading}
+          title="Signing Out..."
+          subtitle="Clearing your session securely"
+        />
+      )}
 
       <main className="relative min-h-screen bg-[#fcfbf7] text-[#173d35] selection:bg-[#d5b36a]/30">
         {/* 1. Header Navigation Bar */}
