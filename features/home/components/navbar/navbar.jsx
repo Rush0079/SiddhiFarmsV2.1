@@ -124,7 +124,7 @@ export default function Navbar({ user, profile, flashSale, saleTimeRemaining, on
             <motion.button
               whileHover={{ scale: 1.04, y: -1 }}
               whileTap={{ scale: 0.96 }}
-              className="button-light shimmer-button shadow-lg text-xs sm:text-sm font-bold cursor-pointer"
+              className="button-light shimmer-button inline-flex items-center gap-2 rounded-full bg-white text-[#173d35] px-5 py-2 text-xs sm:text-sm font-bold shadow-lg hover:bg-[#f3f5ef] hover:shadow-xl transition-all cursor-pointer"
               onClick={onBookingOpen}
             >
               Plan your visit <ArrowUpRight size={16} />
@@ -166,7 +166,7 @@ export default function Navbar({ user, profile, flashSale, saleTimeRemaining, on
                   )}
                   <button
                     onClick={() => { setMenuOpen(false); onBookingOpen?.() }}
-                    className="button-light shimmer-button w-full justify-center text-sm font-bold mt-1 cursor-pointer"
+                    className="button-light shimmer-button inline-flex items-center justify-center gap-2 rounded-full bg-white text-[#173d35] px-5 py-3 text-sm font-bold shadow-lg hover:bg-[#f3f5ef] transition-all w-full mt-1 cursor-pointer"
                   >
                     Plan your visit ↗
                   </button>

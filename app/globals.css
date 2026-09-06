@@ -29,6 +29,32 @@
   .stay-card { overflow: hidden; border: 1px solid #e1e7dd; border-radius: 1rem; background: white; }
 }
 
+/* ─── Unpurgeable Core Button Utility Classes ────────────────────────────── */
+.button-light {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  border-radius: 9999px;
+  padding: 0.75rem 1.35rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  background: #ffffff !important;
+  color: #173d35 !important;
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 4px 14px 0 rgba(0, 0, 0, 0.15);
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+}
+.button-light:hover {
+  background: #f4f7f2 !important;
+  color: #102a24 !important;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px 0 rgba(0, 0, 0, 0.2);
+}
+
+
 .hero { position: relative; overflow: hidden; background: linear-gradient(90deg, rgba(12,42,34,.92) 0%, rgba(18,57,46,.62) 48%, rgba(16,47,39,.2) 100%), url('/siddhi/page-02.jpg') center/cover; }
 .hero::after { position: absolute; inset: 0; background: linear-gradient(0deg, rgba(12,42,34,.45), transparent 42%); content: ''; }
 .stay-image { position: relative; height: 250px; background-position: center; background-size: cover; }
