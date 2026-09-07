@@ -107,10 +107,15 @@ export default function BookingPanel({ pricing, user, onClose, flashSale }) {
       try {
         console.log('[UI:BookingPanel:COUPONS] Loading available coupons...')
         const res = await fetch('/api/coupons')
-        const coupons = await res.json()
-        setAllCoupons(coupons || [])
-        console.log('[UI:BookingPanel:COUPONS] Loaded', (coupons || []).length, 'coupons [OK]')
+        if (res.ok) {
+          const coupons = await res.json()
+          setAllCoupons(Array.isArray(coupons) ? coupons : [])
+          console.log('[UI:BookingPanel:COUPONS] Loaded', (coupons || []).length, 'coupons [OK]')
+        } else {
+          setAllCoupons([])
+        }
       } catch (err) {
+        setAllCoupons([])
         console.error('[UI:BookingPanel:COUPONS] Failed to load coupons [ERROR]', err.message)
       }
     }
@@ -133,7 +138,22 @@ export default function BookingPanel({ pricing, user, onClose, flashSale }) {
 
     console.log('[UI:BookingPanel:COUPON_VALIDATE] Validating code:', normalizedCode, '| Subtotal:', currentSubtotal)
 
-    const coupon = allCoupons.find(c => c.code.toUpperCase() === normalizedCode && c.active)
+    const couponsList = Array.isArray(allCoupons) ? allCoupons : []
+    let coupon = couponsList.find(c => c.code && c.code.toUpperCase() === normalizedCode && c.active)
+
+    // Fallback: Query public coupon validate endpoint (for guest users without admin list access)
+    if (!coupon) {
+      try {
+        const valRes = await fetch(`/api/coupons/validate?code=${encodeURIComponent(normalizedCode)}`)
+        if (valRes.ok) {
+          const valData = await valRes.json()
+          if (valData.valid && valData.coupon) {
+            coupon = { ...valData.coupon, active: true }
+          }
+        }
+      } catch {}
+    }
+
     if (coupon) {
       if (coupon.expires_at && new Date(coupon.expires_at) < new Date()) {
         console.log('[UI:BookingPanel:COUPON_VALIDATE] Coupon expired:', normalizedCode)

@@ -36,6 +36,26 @@ const GITHUB_REPO = process.env.GITHUB_REPO || 'Rush0079/SiddhiFarmsV2.1'
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN || ''
 const CANDIDATE_MODELS = ['gemini-3.6-flash', 'gemini-3.7-flash', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-flash-latest']
 
+const SENSITIVE_PATTERNS = [
+  /^\.env/i,
+  /\.env\./i,
+  /^\.git/i,
+  /\.git[/\\]/i,
+  /\.pem$/i,
+  /\.key$/i,
+  /id_rsa/i,
+  /secrets?\./i,
+]
+
+function assertNotSensitive(filePath = '') {
+  const base = path.basename(filePath)
+  for (const pattern of SENSITIVE_PATTERNS) {
+    if (pattern.test(filePath) || pattern.test(base)) {
+      throw new Error('Access denied: Sensitive configuration or environment files cannot be accessed.')
+    }
+  }
+}
+
 /**
  * Safely resolves user-provided filepaths within workspace boundaries to prevent traversal attacks.
  * @param {string} userPath - User-supplied relative path
@@ -43,6 +63,7 @@ const CANDIDATE_MODELS = ['gemini-3.6-flash', 'gemini-3.7-flash', 'gemini-2.0-fl
  */
 function resolveSafePath(userPath = '') {
   const cleaned = userPath.replace(/^[/\\]+/, '')
+  assertNotSensitive(cleaned)
   const resolved = path.resolve(WORKSPACE_ROOT, cleaned)
   if (!resolved.startsWith(WORKSPACE_ROOT)) {
     throw new Error('Access denied: Path outside workspace.')
@@ -102,6 +123,7 @@ async function executeTool(name, args = {}) {
 
       case 'read_file': {
         const cleanPath = (args.filePath || '').replace(/^[/\\]+/, '')
+        assertNotSensitive(cleanPath)
         let content = ''
 
         if (isCloudMode) {
@@ -183,6 +205,7 @@ async function executeTool(name, args = {}) {
 
       case 'patch_file': {
         const cleanPath = (args.filePath || '').replace(/^[/\\]+/, '')
+        assertNotSensitive(cleanPath)
         let currentContent = ''
         let fileSha = ''
 
@@ -249,6 +272,7 @@ async function executeTool(name, args = {}) {
 
       case 'write_file': {
         const cleanPath = (args.filePath || '').replace(/^[/\\]+/, '')
+        assertNotSensitive(cleanPath)
         if (isCloudMode) {
           let sha = undefined
           try {
