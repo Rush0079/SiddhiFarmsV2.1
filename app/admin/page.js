@@ -137,20 +137,32 @@ export default function AdminPage() {
     return () => clearInterval(timer)
   }, [authModal?.resendCooldown])
 
+  // ─── Protected Administrative API Client ─────────────────────────────────
+  async function adminFetch(url, options = {}) {
+    const res = await fetch(url, options)
+    if (res.status === 401 || res.status === 403) {
+      console.warn('[ADMIN:API:UNAUTHORIZED] Session expired or invalid on', url)
+      const data = await res.clone().json().catch(() => ({}))
+      showError('Session Expired', data.error || 'Your administrative session has expired. Please sign in again.')
+      window.location.replace('/login?reason=timeout')
+    }
+    return res
+  }
+
   // ─── Initial Authorization & Data Ingestion ───────────────────────────────
   async function loadAll() {
     console.log('[UI:AdminPage:DATA] Ingesting all administrative domain records')
     const [p, s, b, c, i, pay, terms, adv, fs, cust] = await Promise.all([
-      fetch('/api/pricing').then((r) => r.json()).catch(() => ({})),
-      fetch('/api/admin/summary').then((r) => r.json()).catch(() => ({})),
-      fetch('/api/bookings').then((r) => r.json()).catch(() => []),
-      fetch('/api/coupons').then((r) => r.json()).catch(() => []),
-      fetch('/api/images').then((r) => r.json()).catch(() => ({})),
-      fetch('/api/payments/config').then((r) => r.json()).catch(() => ({})),
-      fetch('/api/booking-terms').then((r) => r.json()).catch(() => ({})),
-      fetch('/api/advance-codes').then((r) => (r.ok ? r.json() : [])).catch(() => []),
-      fetch('/api/flash-sale').then((r) => r.json()).catch(() => ({})),
-      fetch('/api/admin/customers').then((r) => (r.ok ? r.json() : [])).catch(() => []),
+      adminFetch('/api/pricing').then((r) => r.json()).catch(() => ({})),
+      adminFetch('/api/admin/summary').then((r) => r.json()).catch(() => ({})),
+      adminFetch('/api/bookings').then((r) => r.json()).catch(() => []),
+      adminFetch('/api/coupons').then((r) => r.json()).catch(() => []),
+      adminFetch('/api/images').then((r) => r.json()).catch(() => ({})),
+      adminFetch('/api/payments/config').then((r) => r.json()).catch(() => ({})),
+      adminFetch('/api/booking-terms').then((r) => r.json()).catch(() => ({})),
+      adminFetch('/api/advance-codes').then((r) => (r.ok ? r.json() : [])).catch(() => []),
+      adminFetch('/api/flash-sale').then((r) => r.json()).catch(() => ({})),
+      adminFetch('/api/admin/customers').then((r) => (r.ok ? r.json() : [])).catch(() => []),
     ])
 
     setPricing(p)
@@ -213,18 +225,14 @@ export default function AdminPage() {
   // ─── Domain Handlers: Pricing & Rates ─────────────────────────────────────
   async function savePricing() {
     console.log('[UI:AdminPage:PRICING] Saving rate card')
-    const res = await fetch('/api/pricing', {
+    const res = await adminFetch('/api/pricing', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(pricing),
     })
     if (!res.ok) {
+      if (res.status === 401 || res.status === 403) return
       const data = await res.json().catch(() => ({}))
-      if (res.status === 401 || res.status === 403) {
-        showError('Session Expired', data.error || 'Your administrative session has expired. Please sign in again.')
-        window.location.replace('/login?reason=timeout')
-        return
-      }
       showError('Save Failed', data.error || 'Could not save pricing')
       return
     }
@@ -235,18 +243,14 @@ export default function AdminPage() {
 
   async function savePricingMap(map) {
     setPricing(map)
-    const res = await fetch('/api/pricing', {
+    const res = await adminFetch('/api/pricing', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(map),
     })
     if (!res.ok) {
+      if (res.status === 401 || res.status === 403) return
       const data = await res.json().catch(() => ({}))
-      if (res.status === 401 || res.status === 403) {
-        showError('Session Expired', data.error || 'Your administrative session has expired. Please sign in again.')
-        window.location.replace('/login?reason=timeout')
-        return
-      }
       showError('Save Failed', data.error || 'Could not update rates')
       return
     }
@@ -290,7 +294,7 @@ export default function AdminPage() {
   // ─── Domain Handlers: Coupons & Advance Codes ─────────────────────────────
   async function createCoupon(event) {
     event.preventDefault()
-    const res = await fetch('/api/coupons', {
+    const res = await adminFetch('/api/coupons', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(coupon),
@@ -300,6 +304,7 @@ export default function AdminPage() {
       showToast(`Coupon ${coupon.code.toUpperCase()} created!`)
       loadAll()
     } else {
+      if (res.status === 401 || res.status === 403) return
       const d = await res.json().catch(() => ({}))
       showError('Coupon Creation Failed', d.error || 'Could not create coupon')
     }
@@ -312,16 +317,18 @@ export default function AdminPage() {
       isDanger: true,
     })
     if (!ok) return
-    await fetch(`/api/coupons/${id}`, { method: 'DELETE' })
-    showToast('Coupon removed')
-    loadAll()
+    const res = await adminFetch(`/api/coupons/${id}`, { method: 'DELETE' })
+    if (res.ok) {
+      showToast('Coupon removed')
+      loadAll()
+    }
   }
 
   async function createAdvanceCode(event) {
     event.preventDefault()
     const code = advanceForm.code.trim().toUpperCase()
     if (!code) return
-    const res = await fetch('/api/advance-codes', {
+    const res = await adminFetch('/api/advance-codes', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(advanceForm),
@@ -334,6 +341,7 @@ export default function AdminPage() {
       )
       loadAll()
     } else {
+      if (res.status === 401 || res.status === 403) return
       const d = await res.json().catch(() => ({}))
       showError('Creation Failed', d.error || 'Failed to create advance code')
     }
@@ -346,19 +354,22 @@ export default function AdminPage() {
       isDanger: true,
     })
     if (!ok) return
-    await fetch(`/api/advance-codes/${id}`, { method: 'DELETE' })
-    showToast('Advance code deleted')
-    loadAll()
+    const res = await adminFetch(`/api/advance-codes/${id}`, { method: 'DELETE' })
+    if (res.ok) {
+      showToast('Advance code deleted')
+      loadAll()
+    }
   }
 
   // ─── Domain Handlers: Bookings & Payments ─────────────────────────────────
   async function updateBooking(id, status) {
     console.log(`[UI:AdminPage:BOOKING] Updating booking ${id} status to ${status}`)
-    const res = await fetch(`/api/bookings/${id}`, {
+    const res = await adminFetch(`/api/bookings/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status }),
     })
+    if (res.status === 401 || res.status === 403) return
     const data = await res.json().catch(() => ({}))
     if (!res.ok) {
       showError('Update Failed', data.error || 'Could not update the booking')
@@ -392,7 +403,7 @@ export default function AdminPage() {
       icon: 'question',
     })
     if (!ok) return
-    const res = await fetch(`/api/bookings/${item.id}`, {
+    const res = await adminFetch(`/api/bookings/${item.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ markBalance: true }),
@@ -402,11 +413,12 @@ export default function AdminPage() {
         'Balance Cleared',
         `Booking ${item.id} is now marked 100% paid and confirmed. Clearance confirmation email dispatched.`
       )
+      loadAll()
     } else {
+      if (res.status === 401 || res.status === 403) return
       const d = await res.json().catch(() => ({}))
       showError('Error', d.error || 'Could not clear balance')
     }
-    loadAll()
   }
 
   async function markPaid(item) {
@@ -418,7 +430,7 @@ export default function AdminPage() {
       icon: 'question',
     })
     if (!ok) return
-    const res = await fetch(`/api/bookings/${item.id}`, {
+    const res = await adminFetch(`/api/bookings/${item.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ paid: true, status: 'confirmed' }),
@@ -428,11 +440,12 @@ export default function AdminPage() {
         'Payment Confirmed',
         `Booking ${item.id} is confirmed and invoice email has been sent.`
       )
+      loadAll()
     } else {
+      if (res.status === 401 || res.status === 403) return
       const d = await res.json().catch(() => ({}))
       showError('Failed', d.error || 'Could not mark booking paid')
     }
-    loadAll()
   }
 
   async function deleteBooking(id) {
@@ -442,15 +455,17 @@ export default function AdminPage() {
       isDanger: true,
     })
     if (!ok) return
-    await fetch(`/api/bookings/${id}`, { method: 'DELETE' })
-    showToast('Booking deleted')
-    loadAll()
+    const res = await adminFetch(`/api/bookings/${id}`, { method: 'DELETE' })
+    if (res.ok) {
+      showToast('Booking deleted')
+      loadAll()
+    }
   }
 
   async function saveBookingTimes() {
     if (!timeEditor) return
     setSavingTimes(true)
-    const res = await fetch(`/api/bookings/${timeEditor.id}`, {
+    const res = await adminFetch(`/api/bookings/${timeEditor.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -460,6 +475,7 @@ export default function AdminPage() {
     })
     setSavingTimes(false)
     if (!res.ok) {
+      if (res.status === 401 || res.status === 403) return
       const d = await res.json().catch(() => ({}))
       showError('Error', d.error || 'Could not save booking times')
       return
@@ -471,12 +487,13 @@ export default function AdminPage() {
 
   // ─── Domain Handlers: Media & Terms ───────────────────────────────────────
   async function setImageUrl(key, url) {
-    const res = await fetch('/api/images', {
+    const res = await adminFetch('/api/images', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ key, url }),
     })
     if (!res.ok) {
+      if (res.status === 401 || res.status === 403) return
       const d = await res.json().catch(() => ({}))
       showError('Save Failed', d.error || 'Could not save image')
       return
@@ -490,8 +507,9 @@ export default function AdminPage() {
     const fd = new FormData()
     fd.append('file', file)
     fd.append('key', key)
-    const res = await fetch('/api/images/upload', { method: 'POST', body: fd })
+    const res = await adminFetch('/api/images/upload', { method: 'POST', body: fd })
     if (!res.ok) {
+      if (res.status === 401 || res.status === 403) return
       const d = await res.json().catch(() => ({}))
       showError('Upload Failed', d.error || 'Upload failed')
     } else {
@@ -502,12 +520,13 @@ export default function AdminPage() {
   }
 
   async function savePayments() {
-    const res = await fetch('/api/payments/config', {
+    const res = await adminFetch('/api/payments/config', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payments),
     })
     if (!res.ok) {
+      if (res.status === 401 || res.status === 403) return
       const d = await res.json().catch(() => ({}))
       showError('Save Failed', d.error || 'Could not save payment settings')
       return
@@ -522,8 +541,9 @@ export default function AdminPage() {
     setQrUploading(true)
     const fd = new FormData()
     fd.append('file', file)
-    const res = await fetch('/api/payments/qr', { method: 'POST', body: fd })
+    const res = await adminFetch('/api/payments/qr', { method: 'POST', body: fd })
     if (!res.ok) {
+      if (res.status === 401 || res.status === 403) return
       const d = await res.json().catch(() => ({}))
       showError('Upload Failed', d.error || 'QR upload failed')
     } else {
@@ -542,12 +562,13 @@ export default function AdminPage() {
       showError('Validation Error', 'Please add a version number and at least one term.')
       return
     }
-    const res = await fetch('/api/booking-terms', {
+    const res = await adminFetch('/api/booking-terms', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ version: bookingTerms.version, terms }),
     })
     if (!res.ok) {
+      if (res.status === 401 || res.status === 403) return
       const data = await res.json().catch(() => ({}))
       showError('Save Failed', data.error || 'Could not save booking terms')
       return
@@ -563,13 +584,14 @@ export default function AdminPage() {
     setBannerUploading(true)
     const fd = new FormData()
     fd.append('file', file)
-    const res = await fetch('/api/flash-sale/upload', { method: 'POST', body: fd })
+    const res = await adminFetch('/api/flash-sale/upload', { method: 'POST', body: fd })
     setBannerUploading(false)
     if (res.ok) {
       const d = await res.json()
       setFlashSale((prev) => ({ ...prev, imageUrl: d.url }))
       showToast('Campaign banner uploaded successfully')
     } else {
+      if (res.status === 401 || res.status === 403) return
       const d = await res.json().catch(() => ({}))
       showError('Upload Failed', d.error || 'Could not upload banner image')
     }
@@ -578,12 +600,11 @@ export default function AdminPage() {
   async function saveFlashSale(event) {
     if (event) event.preventDefault()
     setSavingSale(true)
-    const res = await fetch('/api/flash-sale', {
+    const res = await adminFetch('/api/flash-sale', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(flashSale),
     })
-    const data = await res.json().catch(() => ({}))
     setSavingSale(false)
     if (res.ok) {
       showSuccess(
@@ -594,6 +615,8 @@ export default function AdminPage() {
       )
       loadAll()
     } else {
+      if (res.status === 401 || res.status === 403) return
+      const data = await res.json().catch(() => ({}))
       showError('Save Failed', data.error || 'Could not save flash sale campaign')
     }
   }
@@ -625,7 +648,7 @@ export default function AdminPage() {
 
     setCreatingAdmin(true)
     try {
-      const res = await fetch('/api/admin/auth-otp/request', {
+      const res = await adminFetch('/api/admin/auth-otp/request', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -634,6 +657,7 @@ export default function AdminPage() {
           targetRole: newAdmin.role,
         }),
       })
+      if (res.status === 401 || res.status === 403) return
       const data = await res.json().catch(() => ({}))
       if (!res.ok || !data.ok) {
         throw new Error(data.error || 'Could not dispatch authorization OTP')
@@ -664,7 +688,7 @@ export default function AdminPage() {
 
     setAuthModal((prev) => ({ ...prev, loading: true }))
     try {
-      const res = await fetch('/api/admin/create-user', {
+      const res = await adminFetch('/api/admin/create-user', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -672,6 +696,7 @@ export default function AdminPage() {
           superAdminOtp: authModal.otp.trim(),
         }),
       })
+      if (res.status === 401 || res.status === 403) return
       const data = await res.json().catch(() => ({}))
       if (!res.ok) {
         throw new Error(data.error || 'Failed to create user account')
@@ -693,7 +718,7 @@ export default function AdminPage() {
   async function resendSuperAdminOtp() {
     if (!authModal || authModal.resendCooldown > 0) return
     try {
-      const res = await fetch('/api/admin/auth-otp/request', {
+      const res = await adminFetch('/api/admin/auth-otp/request', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -702,6 +727,7 @@ export default function AdminPage() {
           targetRole: authModal.target?.role,
         }),
       })
+      if (res.status === 401 || res.status === 403) return
       const data = await res.json().catch(() => ({}))
       if (res.ok) {
         setAuthModal((prev) => ({ ...prev, resendCooldown: 60 }))
@@ -715,13 +741,15 @@ export default function AdminPage() {
   }
 
   async function changeRole(userId, role) {
-    await fetch('/api/admin/customers', {
+    const res = await adminFetch('/api/admin/customers', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ userId, role }),
     })
-    showToast(`Role updated to ${role}`)
-    loadAll()
+    if (res.ok) {
+      showToast(`Role updated to ${role}`)
+      loadAll()
+    }
   }
 
   async function removeRole(userId) {
@@ -731,8 +759,9 @@ export default function AdminPage() {
       isDanger: true,
     })
     if (!ok) return
-    const res = await fetch(`/api/admin/customers/${userId}`, { method: 'DELETE' })
+    const res = await adminFetch(`/api/admin/customers/${userId}`, { method: 'DELETE' })
     if (!res.ok) {
+      if (res.status === 401 || res.status === 403) return
       const d = await res.json().catch(() => ({}))
       showError('Error', d.error || 'Could not demote user')
       return
@@ -749,7 +778,7 @@ export default function AdminPage() {
       isDanger: true,
     })
     if (!ok) return
-    const res = await fetch(`/api/admin/customers/${userId}?deleteUser=true`, {
+    const res = await adminFetch(`/api/admin/customers/${userId}?deleteUser=true`, {
       method: 'DELETE',
     })
     if (res.ok) {
@@ -759,15 +788,44 @@ export default function AdminPage() {
       )
       loadAll()
     } else {
+      if (res.status === 401 || res.status === 403) return
       const d = await res.json().catch(() => ({}))
       showError('Delete Failed', d.error || 'Could not delete user account')
     }
   }
 
   async function signOut() {
-    await supabase.auth.signOut()
-    router.push('/login')
-    router.refresh()
+    try {
+      localStorage.removeItem('siddhi_admin_last_active')
+      Object.keys(localStorage).forEach((k) => {
+        if (k.startsWith('sb-') || k.startsWith('siddhi_')) {
+          try { localStorage.removeItem(k) } catch {}
+        }
+      })
+      sessionStorage.clear()
+    } catch {}
+
+    // Expire client-side cookies
+    const expireCookie = (name) => {
+      document.cookie = `${name}=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT; Max-Age=0; SameSite=Lax;`
+    }
+    expireCookie('siddhi_2fa_session')
+    document.cookie.split(';').forEach((c) => {
+      const name = c.split('=')[0].trim()
+      if (name.startsWith('sb-') || name.startsWith('siddhi_')) {
+        expireCookie(name)
+      }
+    })
+
+    try {
+      await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }).catch(() => {})
+    } catch {}
+
+    try {
+      await supabase.auth.signOut().catch(() => {})
+    } catch {}
+
+    window.location.replace('/login')
   }
 
   // ─── Guard: Render loader until verified staff profile is available ───────
@@ -946,11 +1004,13 @@ export default function AdminPage() {
             onRemoveQr={() => {
               const updated = { ...payments, qrUrl: '' }
               setPayments(updated)
-              fetch('/api/payments/config', {
+              adminFetch('/api/payments/config', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(updated),
-              }).then(loadAll)
+              }).then((res) => {
+                if (res.ok) loadAll()
+              })
             }}
           />
         )}

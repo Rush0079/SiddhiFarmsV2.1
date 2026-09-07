@@ -62,13 +62,25 @@ export default function JarvisHUDPage() {
   const recognitionRef = useRef(null)
   const messagesEndRef = useRef(null)
 
-  // Load saved PIN and check authentication on load
+  // Load saved PIN and check authentication on load & bfcache restore
   useEffect(() => {
     const savedPin = localStorage.getItem('jarvis_dev_pin')
     if (savedPin) {
       setPin(savedPin)
       setIsAuthenticated(true)
     }
+
+    const handlePageShow = (event) => {
+      if (event.persisted) {
+        const pinInStorage = localStorage.getItem('jarvis_dev_pin')
+        if (!pinInStorage) {
+          setIsAuthenticated(false)
+          setPin('')
+        }
+      }
+    }
+    window.addEventListener('pageshow', handlePageShow)
+    return () => window.removeEventListener('pageshow', handlePageShow)
   }, [])
 
   // Auto scroll chat

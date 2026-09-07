@@ -218,7 +218,13 @@ export default function HomePage() {
     try {
       console.log('[UI:HomePage:AUTH] Signing out user')
       setIsAuthLoading(true)
+      await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }).catch(() => {})
       await supabase.auth.signOut()
+      try {
+        localStorage.removeItem('siddhi_user_role')
+        sessionStorage.clear()
+        document.cookie = 'siddhi_2fa_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; max-age=0'
+      } catch {}
       setUser(null)
       setProfile(null)
     } catch (err) {

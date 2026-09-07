@@ -118,9 +118,9 @@ export default function LoginCard({ nextUrl = '/admin', isTimedOut = false }) {
         }
       }
 
-      // Non-admin customer proceeds directly
-      router.push('/')
-      router.refresh()
+      // Non-admin customer proceeds directly - replace history so Back button does not return to login form
+      window.location.replace('/')
+      return
     } catch (err) {
       const nextFailed = failedAttempts + 1
       setFailedAttempts(nextFailed)
@@ -171,10 +171,10 @@ export default function LoginCard({ nextUrl = '/admin', isTimedOut = false }) {
         throw new Error(verifyResult.error || 'Verification code failed. Please check and try again.')
       }
 
-      // Verification successful: trigger luxury redirecting loader & navigate
+      // Verification successful: trigger luxury redirecting loader & replace history
       setRedirecting(true)
-      router.push(nextUrl.startsWith('/admin') ? nextUrl : '/admin')
-      router.refresh()
+      const target = nextUrl.startsWith('/admin') ? nextUrl : '/admin'
+      window.location.replace(target)
     } catch (err) {
       setError(err.message || 'Verification failed. Please try again.')
       setRedirecting(false)
