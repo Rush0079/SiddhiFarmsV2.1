@@ -28,6 +28,8 @@ import util from 'util'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
+import { verify2FASessionToken } from '@/lib/auth-session'
+import crypto from 'crypto'
 
 const execPromise = util.promisify(exec)
 const WORKSPACE_ROOT = process.cwd()
@@ -115,7 +117,15 @@ async function executeTool(name, args = {}) {
           if (!fs.existsSync(targetPath)) return { error: `Directory not found: ${args.dirPath}` }
           const entries = fs.readdirSync(targetPath, { withFileTypes: true })
           const results = entries
-            .filter(e => !['node_modules', '.next', '.git', '.vscode'].includes(e.name))
+            .filter(e => {
+              if (['node_modules', '.next', '.git', '.vscode'].includes(e.name)) return false
+              try {
+                assertNotSensitive(e.name)
+                return true
+              } catch {
+                return false
+              }
+            })
             .map(e => ({ name: e.name, type: e.isDirectory() ? 'directory' : 'file' }))
           return { mode: 'local', path: args.dirPath || '/', items: results }
         }
@@ -420,12 +430,32 @@ export async function POST(req) {
       return NextResponse.json({ error: 'Forbidden: JARVIS developer agent is exclusive to Super Admins.' }, { status: 403 })
     }
 
-    const body = await req.json()
+    // 2. Enforce 2FA verification for autonomous agent access
+    let twoFACookie = null
+    if (req?.cookies && typeof req.cookies.get === 'function') {
+      twoFACookie = req.cookies.get('siddhi_2fa_session')?.value
+    } else if (req?.headers?.get) {
+      const rawCookie = req.headers.get('cookie') || ''
+      const match = rawCookie.match(/(?:^|;\s*)siddhi_2fa_session=([^;]+)/)
+      if (match) twoFACookie = decodeURIComponent(match[1])
+    }
+    const sessionValid = await verify2FASessionToken(twoFACookie)
+    if (!sessionValid || sessionValid.userId !== user.id) {
+      console.warn(`[API:JARVIS:2FA_REQUIRED] Access blocked for ${user.email} - Missing/invalid 2FA session`)
+      return NextResponse.json({ error: 'Unauthorized: Valid 2FA verification required.' }, { status: 401 })
+    }
+
+    const body = await req.json().catch(() => ({}))
     const { message, pin, persona = 'friday', conversationHistory = [] } = body
 
-    // 2. Security check: Developer PIN
-    const requiredPin = process.env.JARVIS_DEV_PIN || '8842'
-    if (pin !== requiredPin) {
+    // 3. Security check: Developer PIN with constant-time equality
+    const requiredPin = String(process.env.JARVIS_DEV_PIN || '8842')
+    const passedPin = String(pin || '')
+    const expPinBuf = Buffer.from(requiredPin, 'utf8')
+    const actPinBuf = Buffer.from(passedPin, 'utf8')
+    const pinValid = expPinBuf.length === actPinBuf.length && crypto.timingSafeEqual(expPinBuf, actPinBuf)
+
+    if (!pinValid) {
       console.warn(`[API:JARVIS:AUTH_FAILED] Unauthorized PIN attempt by ${user.email}`)
       return NextResponse.json({
         error: 'Unauthorized: Invalid Developer Passkey PIN.',

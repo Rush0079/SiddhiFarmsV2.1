@@ -46,11 +46,15 @@ export async function POST(req) {
       }, { status: 429 })
     }
 
-    const body = await req.json()
+    const body = await req.json().catch(() => ({}))
     const { message, conversationHistory = [] } = body
 
     if (!message || typeof message !== 'string' || !message.trim()) {
       return NextResponse.json({ error: 'Message is required' }, { status: 400 })
+    }
+
+    if (message.length > 2000) {
+      return NextResponse.json({ error: 'Message is too long (maximum 2,000 characters)' }, { status: 400 })
     }
 
     console.log(`[API:CHAT:QUERY] Incoming prompt from ${ip}: "${message.slice(0, 60)}${message.length > 60 ? '...' : ''}"`)
@@ -105,12 +109,13 @@ TONE & GUIDELINES:
     let lastError = null
 
     // Build chat history ensuring first item is 'user' role
-    const history = conversationHistory
+    const rawHistory = Array.isArray(conversationHistory) ? conversationHistory : []
+    const history = rawHistory
       .slice(-8)
-      .filter(item => item.text && item.text.trim())
+      .filter(item => item && typeof item.text === 'string' && item.text.trim())
       .map(item => ({
         role: item.role === 'user' ? 'user' : 'model',
-        parts: [{ text: item.text }],
+        parts: [{ text: String(item.text).slice(0, 1000) }],
       }))
 
     while (history.length > 0 && history[0].role !== 'user') {

@@ -116,7 +116,7 @@ export async function GET(request, { params }) {
 
     // 3. GET /api/bookings/public/:id
     if (path[0] === 'bookings' && path[1] === 'public' && path[2]) {
-      return handleGetPublicBooking(admin, path[2])
+      return handleGetPublicBooking(admin, path[2], request)
     }
 
     // 4. GET /api/coupons & /api/coupons/validate
@@ -385,4 +385,21 @@ export async function DELETE(request, { params }) {
       { status: 500 }
     )
   }
+}
+
+/**
+ * OPTIONS Dispatcher - Handles Cross-Origin Resource Sharing (CORS) Preflights
+ *
+ * @returns {Promise<NextResponse>}
+ */
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 204,
+    headers: {
+      'Access-Control-Allow-Origin': process.env.CORS_ORIGINS || '*',
+      'Access-Control-Allow-Methods': 'GET, POST, PATCH, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'X-Requested-With, Content-Type, Authorization',
+      'Access-Control-Max-Age': '86400',
+    },
+  })
 }
