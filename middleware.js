@@ -21,18 +21,18 @@ export async function middleware(request) {
   // Only guard /admin and /jarvis routes
   if (!isAdminPath && !isJarvisPath) return response
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || DEFAULT_URL,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || DEFAULT_ANON_KEY,
-    {
-      cookies: {
-        getAll() { return request.cookies.getAll() },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => response.cookies.set(name, value, options))
-        },
-      },
-    }
-  )
+  // Set strict anti-caching headers for administrative routes to defeat bfcache / back-navigation
+  response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0')
+  response.headers.set('Pragma', 'no-cache')
+  response.headers.set('Expires', '0')
+
+  const createRedirect = (url) => {
+    const res = NextResponse.redirect(url)
+    res.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+    res.headers.set('Pragma', 'no-cache')
+    res.headers.set('Expires', '0')
+    return res
+  }
 
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -40,7 +40,7 @@ export async function middleware(request) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     url.searchParams.set('next', pathname)
-    return NextResponse.redirect(url)
+    return createRedirect(url)
   }
 
   // Check role
@@ -57,7 +57,7 @@ export async function middleware(request) {
     const url = request.nextUrl.clone()
     url.pathname = '/'
     url.searchParams.set('error', 'unauthorized')
-    return NextResponse.redirect(url)
+    return createRedirect(url)
   }
 
   // Enforce 2FA Security Token Verification for all administrative access
@@ -70,7 +70,7 @@ export async function middleware(request) {
     url.pathname = '/login'
     url.searchParams.set('next', pathname)
     url.searchParams.set('reason', '2fa_required')
-    return NextResponse.redirect(url)
+    return createRedirect(url)
   }
 
   return response

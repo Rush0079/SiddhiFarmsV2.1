@@ -175,7 +175,7 @@ export default function AdminPage() {
 
       if (!user) {
         console.warn('[UI:AdminPage:AUTH:WARN] No user session found, redirecting to login')
-        router.push('/login')
+        window.location.replace('/login?reason=timeout')
         return
       }
 
@@ -195,16 +195,39 @@ export default function AdminPage() {
       setProfile(p)
       await loadAll()
     })()
+
+    // Detect Back/Forward navigation from bfcache
+    const handlePageShow = async (event) => {
+      if (event.persisted) {
+        console.warn('[ADMIN:BFCACHE] Page restored from back-forward cache. Verifying session...')
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) {
+          window.location.replace('/login?reason=timeout')
+        }
+      }
+    }
+    window.addEventListener('pageshow', handlePageShow)
+    return () => window.removeEventListener('pageshow', handlePageShow)
   }, [])
 
   // ─── Domain Handlers: Pricing & Rates ─────────────────────────────────────
   async function savePricing() {
     console.log('[UI:AdminPage:PRICING] Saving rate card')
-    await fetch('/api/pricing', {
+    const res = await fetch('/api/pricing', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(pricing),
     })
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      if (res.status === 401 || res.status === 403) {
+        showError('Session Expired', data.error || 'Your administrative session has expired. Please sign in again.')
+        window.location.replace('/login?reason=timeout')
+        return
+      }
+      showError('Save Failed', data.error || 'Could not save pricing')
+      return
+    }
     setSaved(true)
     setTimeout(() => setSaved(false), 1800)
     showToast('Pricing rates updated successfully!')
@@ -212,11 +235,21 @@ export default function AdminPage() {
 
   async function savePricingMap(map) {
     setPricing(map)
-    await fetch('/api/pricing', {
+    const res = await fetch('/api/pricing', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(map),
     })
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      if (res.status === 401 || res.status === 403) {
+        showError('Session Expired', data.error || 'Your administrative session has expired. Please sign in again.')
+        window.location.replace('/login?reason=timeout')
+        return
+      }
+      showError('Save Failed', data.error || 'Could not update rates')
+      return
+    }
     loadAll()
   }
 

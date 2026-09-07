@@ -289,7 +289,7 @@ export async function POST(request, { params }) {
 
     // 19. POST /api/auth/logout | /api/auth/signout
     if (path[0] === 'auth' && (path[1] === 'logout' || path[1] === 'signout')) {
-      return handleAuthLogout()
+      return handleAuthLogout(request)
     }
 
     console.warn(`[API:ROUTER:NOT_FOUND] Unrecognized POST path: /api/${routeKey}`)

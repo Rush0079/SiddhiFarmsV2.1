@@ -24,26 +24,42 @@ export default function SessionTimeout() {
 
       console.warn('[SESSION:TIMEOUT] Admin inactivity threshold reached (1 min). Logging out...')
 
-      // 1. Immediately invalidate local token and storage
+      // 1. Immediately wipe local storage and session storage
       try {
         localStorage.removeItem(SessionTimeoutConfig.STORAGE_KEY)
+        Object.keys(localStorage).forEach((key) => {
+          if (key.startsWith('sb-') || key.startsWith('siddhi_')) {
+            try { localStorage.removeItem(key) } catch {}
+          }
+        })
+        sessionStorage.clear()
       } catch {}
 
-      document.cookie = `${SessionTimeoutConfig.COOKIE_NAME}=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT; Max-Age=0; SameSite=Lax;`
+      // Expire client-side cookies
+      const expireCookie = (name) => {
+        document.cookie = `${name}=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT; Max-Age=0; SameSite=Lax;`
+      }
+      expireCookie(SessionTimeoutConfig.COOKIE_NAME)
+      document.cookie.split(';').forEach((c) => {
+        const name = c.split('=')[0].trim()
+        if (name.startsWith('sb-') || name.startsWith('siddhi_')) {
+          expireCookie(name)
+        }
+      })
 
-      // 2. Clear server-side HTTP-only 2FA session cookie (fire & forget with keepalive)
+      // 2. Clear server-side HTTP-only 2FA session and Supabase SSR cookies (awaited!)
       try {
-        fetch('/api/auth/logout', { method: 'POST', keepalive: true }).catch(() => {})
+        await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }).catch(() => {})
       } catch {}
 
-      // 3. Trigger Supabase sign out
+      // 3. Complete Supabase client signOut (awaited!)
       try {
         const supabase = createSupabaseBrowserClient()
-        supabase?.auth?.signOut()?.catch(() => {})
+        await supabase?.auth?.signOut()?.catch(() => {})
       } catch {}
 
-      // 4. Hard redirect to login with timeout notice
-      window.location.href = '/login?reason=timeout'
+      // 4. CRITICAL: Replace history state so browser Back button cannot return to /admin
+      window.location.replace('/login?reason=timeout')
     }
 
     const updateActivity = () => {
@@ -101,11 +117,20 @@ export default function SessionTimeout() {
     document.addEventListener('visibilitychange', handleVisibilityChange)
     window.addEventListener('focus', checkInactivity)
 
+    // bfcache restoration check (when user navigates back/forward)
+    const handlePageShow = (e) => {
+      if (e.persisted) {
+        checkInactivity()
+      }
+    }
+    window.addEventListener('pageshow', handlePageShow)
+
     return () => {
       clearInterval(interval)
       events.forEach(e => window.removeEventListener(e, updateActivity))
       document.removeEventListener('visibilitychange', handleVisibilityChange)
       window.removeEventListener('focus', checkInactivity)
+      window.removeEventListener('pageshow', handlePageShow)
     }
   }, [pathname, router])
 
